@@ -22,21 +22,24 @@ write_rcsv <- function( table, file ) {
 
         # make sure all list elements are vectors, and not lists themselves
         element.listCheck <- sapply( table[[ col ]],
-                                 function(x) { !is.vector( x ) || is.list( x ) }
-
+                                 function(x) {
+                                     { is.vector( x ) && !is.list( x ) } ||
+                                         class( x ) %chin% c( "Date", "POSIXct", "times" )
+                                 }
         )
-        if( any( element.listCheck ) ) {
+        if( any( !element.listCheck ) ) {
             stop( paste( "Column", names( table )[ col ], "contains either non vector or list elements.",
                          "\nrcsv does not support this column type." ) )
         }
 
         # find the class/classes of list elements
-        list.class <- sapply( table[[ col ]], class ) %>%
-            unique()
+        list.class <- sapply( table[[ col ]], class )
+        list.class <- unique( list.class[1] )
 
         # make sure the list has a consistent class, otherwise coerce to character class and warn
         if( length( list.class ) == 1L ) {
             column.classes[ col ] <- paste0( column.classes[ col ], "(", list.class, ")" )
+            table[ , ( col ) := lapply( .SD[[col]], as, Class = "character" ) ]
         } else {
             warning( paste( "List column", names( table )[ col ], "is not of a consistent class.",
                             "\nWill be written as character." ) )
