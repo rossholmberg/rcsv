@@ -32,7 +32,11 @@ read_rcsv <- function( file ) {
                                      "Date" = sapply( .SD[[col]], as.Date, format = "%Y-%m-%d" ),
                                      "POSIXct" = sapply( .SD[[col]], as.POSIXct, format = "%Y-%m-%d %H:%M:%S" ),
                                      "times" = sapply( .SD[[col]], function(x) {
-                                         chron::chron( times. = x, format = "h:m:s", out.format = "h:m:s" )
+                                         if( is.na( suppressWarnings( as.numeric( x[1] ) ) ) ) {
+                                             chron::chron( times. = x, format = "h:m:s", out.format = "h:m:s" )
+                                         } else {
+                                             chron::chron( times. = x, out.format = "h:m:s" )
+                                         }
                                      } ),
                                      sapply( .SD[[col]], function(x) {
                                          as( x, list.class )
