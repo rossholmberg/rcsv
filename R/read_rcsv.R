@@ -27,7 +27,7 @@ read_rcsv <- function( file ) {
         output[ , ( col ) := switch( EXPR = column.classes[ col ],
                                      "Date" = as.Date( .SD[[col]], format = "%Y-%m-%d" ),
                                      "POSIXct" = as.POSIXct( .SD[[col]], format = "%Y-%m-%d %H:%M:%S" ),
-                                     "times" = chron::times( .SD[[col]] ),
+                                     "times" = chron::times( as.numeric( .SD[[col]] ) ),
                                      as( .SD[[col]], column.classes[ col ] )
         ) ]
     }

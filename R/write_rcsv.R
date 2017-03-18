@@ -60,20 +60,18 @@ write_rcsv <- function( df, file ) {
             # special case for times class. Make sure no values > 1
             # (ie: later than midnight, but no date value is specified.)
             if( list.class == "times" ) {
+
                 if( max( as.numeric( unlist( x[[ col ]] ) ) ) > 1 ) {
                     stop( paste( "Column", names( x )[ col ], "of class `times` contains values
                                 greater than 1 (ie: later than midnight, with no date value specified.",
                                  "\nThese values won't be saved and read properly.",
                                  "\nConsider coercing this column to a different class." ) )
                 }
-                # convert times to numeric to avoid rounding errors
-                x[ , ( col ) := lapply( .SD[[ ( col ) ]], as, Class = "numeric" ) ]
+
             }
 
-            # special case for times class. Make sure no values > 1
-            # (ie: later than midnight, but no date value is specified.)
-            if( list.class == "Date" ) {
-                # convert dates to numeric to avoid rounding errors
+            # convert times or Date to numeric to avoid rounding errors
+            if( list.class %chin% c( "times", "Date", "POSIXct" ) ) {
                 x[ , ( col ) := lapply( .SD[[ ( col ) ]], as, Class = "numeric" ) ]
             }
 
