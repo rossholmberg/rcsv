@@ -1,3 +1,14 @@
+#' @title
+#'
+#' @param file character extension of file from which to read
+#'
+#' @export
+#'
+#' @import data.table
+#' @importFrom chron chron
+#'
+
+
 read_rcsv <- function( file ) {
 
     head.line <- readLines( con = file, n = 1 )
@@ -29,14 +40,14 @@ read_rcsv <- function( file ) {
         list.class <- gsub( "^list\\(|\\)$", "", column.classes[ col ] )
 
         output[ , ( col ) := switch( EXPR = list.class,
-                                     "Date" = sapply( .SD[[col]], as.Date, format = "%Y-%m-%d" ),
+                                     "Date" = sapply( .SD[[col]], function(x) {
+                                         x <- as.numeric( x )
+                                         as.Date( x, origin = "1970-01-01 00:00:00" )
+                                     } ),
                                      "POSIXct" = sapply( .SD[[col]], as.POSIXct, format = "%Y-%m-%d %H:%M:%S" ),
-                                     "times" = sapply( .SD[[col]], function(x) {
-                                         if( is.na( suppressWarnings( as.numeric( x[1] ) ) ) ) {
-                                             chron::chron( times. = x, format = "h:m:s", out.format = "h:m:s" )
-                                         } else {
-                                             chron::chron( times. = x, out.format = "h:m:s" )
-                                         }
+                                     "times" = sapply( output[[col]], function(x) {
+                                         x <- as.numeric( x )
+                                         chron::chron( times. = x, out.format = "h:m:s" )
                                      } ),
                                      sapply( .SD[[col]], function(x) {
                                          as( x, list.class )

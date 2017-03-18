@@ -1,15 +1,15 @@
 Package: rcsv
 Type: Package
 Title: A custom csv format to encapsulate data frame information into text files.
-Built around the amazing and fantastic and delicious data.table `fread` and `fwrite` functions.
+    Built around the amazing and fantastic and delicious data.table `fread` and `fwrite` functions.
 Version: 0.1.0
 Authors@R: person( "Ross", "Holmberg", email = "ross@holmberg.com.au", role = c( "aut", "cre" ) )
 Maintainer: Ross Holmberg <ross@holmberg.com.au>
 Description: Building a (very minor) extension to the standard csv format to allow easy data storage and recall in R
-without losing data structure. Column classes, as well as list element classes for list columns*, are stored in a
-`#head:` line, to be used when reading the data back into R again.
-    * Only list columns with a consistent class (ie: all elements of the columns share the same class) are supported.
-List columns with inconsistent class will be coerced to character class.
+    without losing data structure. Column classes, as well as list element classes for list columns*, are stored in a
+    `#head:` line, to be used when reading the data back into R again.
+        * Only list columns with a consistent class (ie: all elements of the columns share the same class) are supported.
+    List columns with inconsistent class will be coerced to character class.
 License: GPL-3 + file LICENSE
 URL: https://github.com/rossholmberg/rcsv
 Encoding: UTF-8
