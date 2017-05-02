@@ -1,3 +1,29 @@
+#'
+#' @title write_rcsv
+#' @description write out an rcsv file, an extension of csv, with column format details
+#' stored in a header for more consistent reading into R
+#'
+#' @param table a data.table or data.frame object to write out
+#' @param file file path to which the rscv will be written
+#' @param strings.convert global switching of storage conversion types
+#' @param strings.as.factor.ints logical, convert strings to factors,
+#' and write to file as integer. May save space on disk.
+#' @param factors.as.ints logical, write factor columns to file as
+#' integer, with "levels" stored in a header object. May save space on disk.
+#' @param dates.as.ints logical,  write date columns to file as
+#' integer, with "tz" stored in a header object, and origin assumed to be
+#' "1970-01-01". May save space on disk.
+#' @param posix.as.num logical, write POSIXct columns to file as
+#' numeric, with "tz" stored in a header object, and origin assumed to be
+#' "1970-01-01 00:00:00". May save space on disk.
+#' @param times.as.num logical, write `chron::times` columns to file as
+#' numeric. Allows for sub-second precision to be stored, as opposed to
+#' converting times to character, therefore only storing precision to seconds.
+#'
+#' @import data.table
+#' @importFrom chron times
+#'
+#' @export
 
 write_rcsv <- function( table,
                         file,
@@ -5,7 +31,7 @@ write_rcsv <- function( table,
                         strings.as.factor.ints = strings.convert,
                         factors.as.ints = strings.convert,
                         dates.as.ints = strings.convert,
-                        posix.as.ints = strings.convert,
+                        posix.as.num = strings.convert,
                         times.as.num = strings.convert ) {
 
 
@@ -182,7 +208,7 @@ write_rcsv <- function( table,
     )
 
     # now write the data out, appending below the head line
-    data.table::fwrite( x,
+    data.table::fwrite( input,
                         file = file,
                         append = TRUE,
                         sep = ",", sep2 = c( "", "|", "" ),

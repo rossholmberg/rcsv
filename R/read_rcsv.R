@@ -1,8 +1,26 @@
-
+#'
+#' @title read_rcsv
+#' @description read an rcsv file, an extension of csv, with column format details
+#' stored in a header for more consistent reading into R
+#'
+#' @param file file path to which the rscv will be written
+#'
+#' @import data.table
+#' @importFrom chron times
+#'
+#' @export
 
 read_rcsv <- function( file ) {
 
+
+    .SD <- NULL
+
     head.line <- readLines( con = file, n = 1 )
+
+    if( !grepl( "rcsvHeader", head.line ) ) {
+        stop( "This is not an rcsv file, consider using a different file reader." )
+    }
+
     head.lines <- as.integer( gsub( ".*headlines:|}.*", "", head.line ) )
     body.rows <- as.integer( gsub( ".*tablerows:|}.*", "", head.line ) )
 
@@ -146,15 +164,15 @@ read_rcsv <- function( file ) {
     # }
 
 
-    # before returning to the user, check that all columns are now in the correct format
-    output.col.classes <- lapply( output, class )
-    output.col.classes <- sapply( output.col.classes, "[", 1L )
-
-    # coerce any remaining columns to their appropriate format
-    columns.toconvert <- which( output.col.classes != column.classes )
-    for( col in columns.toconvert ) {
-        output[ , ( col ) := as( .SD[[col]], column.classes[ col ] ) ]
-    }
+    # # before returning to the user, check that all columns are now in the correct format
+    # output.col.classes <- lapply( output, class )
+    # output.col.classes <- sapply( output.col.classes, "[", 1L )
+    #
+    # # coerce any remaining columns to their appropriate format
+    # columns.toconvert <- which( output.col.classes != column.classes )
+    # for( col in columns.toconvert ) {
+    #     output[ , ( col ) := as( .SD[[col]], column.classes[ col ] ) ]
+    # }
 
 
     return( output )
