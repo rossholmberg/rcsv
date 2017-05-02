@@ -1,5 +1,11 @@
 write_rcsv <- function( table,
-                        file ) {
+                        file,
+                        strings.convert = FALSE,
+                        strings.as.factor.ints = strings.convert,
+                        factors.as.ints = strings.convert,
+                        dates.as.ints = strings.convert,
+                        posix.as.ints = strings.convert,
+                        times.as.num = strings.convert ) {
 
 
     # make sure the input object qualifies as a data frame
@@ -26,7 +32,7 @@ write_rcsv <- function( table,
     head.line.readlines <- paste(
         "rcsvHeader",
         paste0( "headlines:", head.lines ),
-        paste0( "bodyrows:", body.rows ),
+        paste0( "tablerows:", body.rows ),
         sep = "},{"
     )
 
@@ -43,6 +49,26 @@ write_rcsv <- function( table,
     # this will be used when reading the file back into R
     header <- paste( column.names.header, column.classes.header, sep = "},{" )
 
+    if( strings.as.factor.ints ) {
+        char.cols <- which( column.classes == "character" )
+        for( col in char.cols ) {
+            input[ , ( col ) := factor( .SD[[col]] ) ]
+        }
+        levels.char.cols <- lapply(
+            X = input[ , char.cols, with = FALSE ],
+            FUN = levels
+        )
+        levels.char.cols <- sapply( levels.char.cols, paste, collapse = "," )
+        levels.char.cols <- paste0( "levels:", levels.char.cols )
+        for( col in char.cols ) {
+            input[ , ( col ) := as.integer( .SD[[col]] ) ]
+        }
+        header[ char.cols ] <- paste( header[ char.cols ],
+                                      levels.char.cols,
+                                      "from:factorints",
+                                      sep = "},{" )
+    }
+
     # add a levels parameter to any factor columns
     if( "factor" %chin% column.classes ) {
         factor.cols <- which( column.classes == "factor" )
@@ -52,10 +78,21 @@ write_rcsv <- function( table,
         )
         header.factor.cols <- sapply( header.factor.cols, paste, collapse = "," )
         header.factor.cols <- paste0( "levels:", header.factor.cols )
-        header[ factor.cols ] <- paste( header[ factor.cols ],
-                                        header.factor.cols,
-                                        "from:string",
-                                        sep = "},{" )
+        if( factors.as.ints ) {
+            for( col in factor.cols ) {
+                input[ , ( col ) := as.integer( .SD[[col]] ) ]
+            }
+            header[ factor.cols ] <- paste( header[ factor.cols ],
+                                            header.factor.cols,
+                                            "from:integer",
+                                            sep = "},{" )
+        } else {
+            header[ factor.cols ] <- paste( header[ factor.cols ],
+                                            header.factor.cols,
+                                            "from:string",
+                                            sep = "},{" )
+        }
+
     }
 
     # add timezone to any POSIXct columns
@@ -74,35 +111,68 @@ write_rcsv <- function( table,
             FUN.VALUE = vector( "character", length = length( posix.cols ) )
         )
         header.posix.cols <- paste0( "tz:", header.posix.cols )
-        header[ posix.cols ] <- paste( header[ posix.cols ],
-                                       header.posix.cols,
-                                       "from:string",
-                                       sep = "},{" )
+        if( posix.as.ints ) {
+            for( col in posix.cols ) {
+                input[ , ( col ) := as.integer( .SD[[col]] ) ]
+            }
+            header[ posix.cols ] <- paste( header[ posix.cols ],
+                                           header.posix.cols,
+                                           "from:integer",
+                                           sep = "},{" )
+        } else {
+            header[ posix.cols ] <- paste( header[ posix.cols ],
+                                           header.posix.cols,
+                                           "from:string",
+                                           sep = "},{" )
+        }
+
     }
 
     # convert any columns of `timeas` class to character before writing
     if( "times" %chin% column.classes ) {
         times.cols <- which( column.classes == "times" )
-        for( col in times.cols ) {
-            input[ , ( col ) := as( .SD[[col]], "character" ) ]
-            header[ col ] <- paste( header[ col ],
-                                    "from:string",
-                                    sep = "},{" )
+        if( times.as.num ) {
+            for( col in times.cols ) {
+                input[ , ( col ) := as.numeric( .SD[[col]] ) ]
+            }
+            header[ times.cols ] <- paste( header[ times.cols ],
+                                           "from:numeric",
+                                           sep = "},{" )
+        } else {
+            for( col in times.cols ) {
+                input[ , ( col ) := as.character( .SD[[col]] ) ]
+            }
+            header[ times.cols ] <- paste( header[ times.cols ],
+                                           "from:string",
+                                           sep = "},{" )
         }
+
     }
 
     if( "Date" %chin% column.classes ) {
         date.cols <- which( column.classes == "Date" )
-        for( col in date.cols ) {
-            input[ , ( col ) := as( .SD[[col]], "character" ) ]
-            header[ col ] <- paste( header[ col ],
-                                    "from:string",
-                                    sep = "},{" )
+        if( dates.as.ints ) {
+            for( col in date.cols ) {
+                input[ , ( col ) := as.integer( .SD[[col]] ) ]
+            }
+            header[ date.cols ] <- paste( header[ date.cols ],
+                                          "from:integer",
+                                          sep = "},{" )
+        } else {
+            for( col in date.cols ) {
+                input[ , ( col ) := as.character( .SD[[col]] ) ]
+            }
+            header[ date.cols ] <- paste( header[ date.cols ],
+                                          "from:string",
+                                          sep = "},{" )
         }
     }
 
     # write the header to the output file
-    header <- paste0( "#{", c( head.line.readlines, header ), "}" )
+    header <- paste0( "#{",
+                      c( head.line.readlines,
+                         paste0( "colref:", seq_along( input ), "},{", header ) ),
+                      "}" )
     cat( header,
          sep = "\n",
          file = file, append = FALSE

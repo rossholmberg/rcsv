@@ -1,8 +1,10 @@
+
+
 read_rcsv <- function( file ) {
 
     head.line <- readLines( con = file, n = 1 )
     head.lines <- as.integer( gsub( ".*headlines:|}.*", "", head.line ) )
-    body.rows <- as.integer( gsub( ".*bodyrows:|}.*", "", head.line ) )
+    body.rows <- as.integer( gsub( ".*tablerows:|}.*", "", head.line ) )
 
     header <- readLines( con = file, n = head.lines )[ -1L ]
 
@@ -24,30 +26,101 @@ read_rcsv <- function( file ) {
     # adjust all non-list columns to the classes they should be
     for( col in column.classes.tofollowup ) {
         col.class <- column.classes[ col ]
+        convert.from <- gsub( ".*from:|}.*", "", header[ col ] )
+
         if( col.class == "Date" ) {
-            output[ , ( col ) := as.Date( .SD[[col]], format = "%Y-%m-%d" ) ]
+
+            if( convert.from == "integer" ) {
+                output[ , ( col ) := as.Date( as.integer( .SD[[col]] ),
+                                              origin = "1970-01-01" ) ]
+            } else if( convert.from == "string" ) {
+                output[ , ( col ) := as.Date( .SD[[col]], format = "%Y-%m-%d" ) ]
+            } else {
+                warning( paste0( "Don't know how to convert Date column `",
+                                 column.names[ col ],
+                                 "` from class ",
+                                 convert.from, " to ", col.class, "." )
+                )
+            }
 
         } else if( col.class == "POSIXct" ) {
             tz <- gsub( ".*tz:|}.*", "", header[ col ] )
-            if( tz == "none" ) {
-                warning( paste0( "Timezone is not set for POSIXct column: `",
-                                 column.names[ col ],
-                                 "`. Beware of possible consequences." )
-                )
-                output[ , ( col ) := as.POSIXct( .SD[[col]], format = "%Y-%m-%d %H:%M:%S" ) ]
+
+            if( convert.from == "string" ) {
+                if( tz == "none" ) {
+                    warning( paste0( "Timezone is not set for POSIXct column: `",
+                                     column.names[ col ],
+                                     "`. Beware of possible consequences." )
+                    )
+                    output[ , ( col ) := as.POSIXct( .SD[[col]],
+                                                     format = "%Y-%m-%d %H:%M:%S" ) ]
+                } else {
+                    output[ , ( col ) := as.POSIXct( .SD[[col]],
+                                                     format = "%Y-%m-%d %H:%M:%S",
+                                                     tz = tz ) ]
+                }
+            } else if( convert.from == "integer" ) {
+                if( tz == "none" ) {
+                    warning( paste0( "Timezone is not set for POSIXct column: `",
+                                     column.names[ col ],
+                                     "`. Beware of possible consequences." )
+                    )
+                    output[ , ( col ) := as.POSIXct( as.integer( .SD[[col]] ),
+                                                     origin = "1970-01-01 00:00:00" ) ]
+                } else {
+                    output[ , ( col ) := as.POSIXct( as.integer( .SD[[col]] ),
+                                                     origin = "1970-01-01 00:00:00",
+                                                     tz = tz ) ]
+                }
             } else {
-                output[ , ( col ) := as.POSIXct( .SD[[col]], format = "%Y-%m-%d %H:%M:%S", tz = tz ) ]
+                warning( paste0( "Don't know how to convert POSIXct column `",
+                                 column.names[ col ],
+                                 "` from class ",
+                                 convert.from, " to ", col.class, "." )
+                )
             }
 
+
+
         } else if( col.class == "times" ) {
-            output[ , ( col ) := chron::times( .SD[[col]] ) ]
+
+            if( convert.from == "string" ) {
+                output[ , ( col ) := chron::times( .SD[[col]] ) ]
+            } else if( convert.from == "numeric" ) {
+                output[ , ( col ) := chron::times( as.numeric( .SD[[col]] ) ) ]
+            } else {
+                warning( paste0( "Don't know how to convert times column `",
+                                 column.names[ col ],
+                                 "` from class ",
+                                 convert.from, " to ", col.class, "." )
+                )
+            }
 
         } else if( col.class == "factor" ) {
+
             factor.levels <- gsub( ".*levels:|}.*", "", header[ col ] )
             factor.levels <- unlist( strsplit( factor.levels, "," ) )
-            output[ , ( col ) := factor( .SD[[col]], levels = factor.levels ) ]
+
+            if( convert.from == "string" ) {
+                output[ , ( col ) := factor( .SD[[col]], levels = factor.levels ) ]
+            } else if( convert.from == "integer" ) {
+                output[ , ( col ) := factor( as.integer( .SD[[col]] ),
+                                             labels = factor.levels ) ]
+            }
+
         }
 
+    }
+
+    # also follow up on character columns still needing conversion
+    char.cols <- which( column.classes == "character" )
+    convert.from <- gsub( ".*from:|}.*", "", header[ char.cols ] )
+    for( col in char.cols[ convert.from == "factorints" ] ) {
+        factor.levels <- gsub( ".*levels:|}.*", "", header[ col ] )
+        factor.levels <- unlist( strsplit( factor.levels, "," ) )
+        output[ , ( col ) := as.integer( .SD[[col]] ) ]
+        output[ , ( col ) := factor( .SD[[col]], labels = factor.levels ) ]
+        output[ , ( col ) := as.character( .SD[[col]] ) ]
     }
 
     # adjust list columns to make list elements the classes they should be
@@ -71,6 +144,18 @@ read_rcsv <- function( file ) {
     #                                      as( x, list.class )
     #                                  } ) ) ]
     # }
+
+
+    # before returning to the user, check that all columns are now in the correct format
+    output.col.classes <- lapply( output, class )
+    output.col.classes <- sapply( output.col.classes, "[", 1L )
+
+    # coerce any remaining columns to their appropriate format
+    columns.toconvert <- which( output.col.classes != column.classes )
+    for( col in columns.toconvert ) {
+        output[ , ( col ) := as( .SD[[col]], column.classes[ col ] ) ]
+    }
+
 
     return( output )
 
