@@ -13,7 +13,6 @@
 
 read_rcsv <- function( file ) {
 
-
     .SD <- NULL
 
     head.line <- readLines( con = file, n = 1 )
@@ -33,7 +32,8 @@ read_rcsv <- function( file ) {
 
     column.classes.readin <- column.classes
     column.classes.tofollowup <- which( column.classes.readin %chin%
-                                            c( "POSIXct", "Date", "factor", "times", "ITime" ) )
+                                            c( "POSIXct", "Date", "factor",
+                                               "times", "ITime", "logical" ) )
     column.classes.readin[ column.classes.tofollowup ] <- "character"
 
     output <- data.table::fread( file = file,
@@ -101,6 +101,18 @@ read_rcsv <- function( file ) {
             }
 
 
+
+        } else if( col.class == "logical" ) {
+
+            if( convert.from %chin% c( "long", "short" ) ) {
+                output[ , ( col ) := as.logical( .SD[[col]] ) ]
+            } else {
+                warning( paste0( "Don't know how to convert logical column `",
+                                 column.names[ col ],
+                                 "` from class ",
+                                 convert.from, " to ", col.class, "." )
+                )
+            }
 
         } else if( col.class == "times" ) {
 
