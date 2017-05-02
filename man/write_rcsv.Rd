@@ -7,7 +7,8 @@
 write_rcsv(table, file, strings.convert = FALSE,
   strings.as.factor.ints = strings.convert,
   factors.as.ints = strings.convert, dates.as.ints = strings.convert,
-  posix.as.num = strings.convert, times.as.num = strings.convert)
+  posix.as.num = strings.convert, times.as.num = strings.convert,
+  ITimes.as.ints = strings.convert)
 }
 \arguments{
 \item{table}{a data.table or data.frame object to write out}
@@ -17,24 +18,30 @@ write_rcsv(table, file, strings.convert = FALSE,
 \item{strings.convert}{global switching of storage conversion types}
 
 \item{strings.as.factor.ints}{logical, convert strings to factors,
-and write to file as integer. May save space on disk.}
+and write to file as integer. May save space on disk}
 
 \item{factors.as.ints}{logical, write factor columns to file as
-integer, with "levels" stored in a header object. May save space on disk.}
+integer, with "levels" stored in a header object. May save space on disk}
 
 \item{dates.as.ints}{logical,  write date columns to file as
 integer, with "tz" stored in a header object, and origin assumed to be
-"1970-01-01". May save space on disk.}
+"1970-01-01". May save space on disk}
 
 \item{posix.as.num}{logical, write POSIXct columns to file as
 numeric, with "tz" stored in a header object, and origin assumed to be
-"1970-01-01 00:00:00". May save space on disk.}
+"1970-01-01 00:00:00". May save space on disk}
 
 \item{times.as.num}{logical, write `chron::times` columns to file as
 numeric. Allows for sub-second precision to be stored, as opposed to
-converting times to character, therefore only storing precision to seconds.}
+converting times to character, therefore only storing precision to seconds}
+
+\item{ITimes.as.ints}{logical, write `ITime` columns to file as
+integers. May save space on disk}
 }
 \description{
+an extension of the csv file format
+}
+\details{
 write out an rcsv file, an extension of csv, with column format details
 stored in a header for more consistent reading into R
 }

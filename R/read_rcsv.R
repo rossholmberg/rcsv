@@ -1,6 +1,7 @@
 #'
 #' @title read_rcsv
-#' @description read an rcsv file, an extension of csv, with column format details
+#' @description an extension of the csv file format
+#' @details  read an rcsv file, an extension of csv, with column format details
 #' stored in a header for more consistent reading into R
 #'
 #' @param file file path to which the rscv will be written
@@ -31,7 +32,8 @@ read_rcsv <- function( file ) {
     column.classes <- gsub( ".*colclass:|}.*", "", header )
 
     column.classes.readin <- column.classes
-    column.classes.tofollowup <- which( column.classes.readin %chin% c( "POSIXct", "Date", "factor", "times" ) )
+    column.classes.tofollowup <- which( column.classes.readin %chin%
+                                            c( "POSIXct", "Date", "factor", "times", "ITime" ) )
     column.classes.readin[ column.classes.tofollowup ] <- "character"
 
     output <- data.table::fread( file = file,
@@ -108,6 +110,22 @@ read_rcsv <- function( file ) {
                 output[ , ( col ) := chron::times( as.numeric( .SD[[col]] ) ) ]
             } else {
                 warning( paste0( "Don't know how to convert times column `",
+                                 column.names[ col ],
+                                 "` from class ",
+                                 convert.from, " to ", col.class, "." )
+                )
+            }
+
+        } else if( col.class == "ITime" ) {
+
+            if( convert.from == "string" ) {
+                output[ , ( col ) := as.ITime( .SD[[col]] ) ]
+            } else if( convert.from == "integer" ) {
+                output[ , ( col ) := setattr( as.integer( .SD[[col]] ),
+                                              "class",
+                                              "ITime" ) ]
+            } else {
+                warning( paste0( "Don't know how to convert ITime column `",
                                  column.names[ col ],
                                  "` from class ",
                                  convert.from, " to ", col.class, "." )

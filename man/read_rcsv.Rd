@@ -10,6 +10,9 @@ read_rcsv(file)
 \item{file}{file path to which the rscv will be written}
 }
 \description{
+an extension of the csv file format
+}
+\details{
 read an rcsv file, an extension of csv, with column format details
 stored in a header for more consistent reading into R
 }
