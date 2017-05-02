@@ -16,11 +16,11 @@ read_rcsv <- function( file ) {
     column.classes.tofollowup <- which( column.classes.readin %chin% c( "POSIXct", "Date", "factor", "times" ) )
     column.classes.readin[ column.classes.tofollowup ] <- "character"
 
-    output <- fread( file = file,
-                     skip = head.lines,
-                     col.names = column.names,
-                     sep = ",", sep2 = c( "", "|", "" ),
-                     colClasses = column.classes.readin
+    output <- data.table::fread( file = file,
+                                 skip = head.lines,
+                                 col.names = column.names,
+                                 sep = ",", sep2 = c( "", "|", "" ),
+                                 colClasses = column.classes.readin
     )
 
     # adjust all non-list columns to the classes they should be

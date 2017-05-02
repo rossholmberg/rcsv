@@ -1,3 +1,4 @@
+
 write_rcsv <- function( table,
                         file,
                         strings.convert = FALSE,
@@ -69,6 +70,7 @@ write_rcsv <- function( table,
                                       sep = "},{" )
     }
 
+
     # add a levels parameter to any factor columns
     if( "factor" %chin% column.classes ) {
         factor.cols <- which( column.classes == "factor" )
@@ -124,6 +126,7 @@ write_rcsv <- function( table,
                                            header.posix.cols,
                                            "from:string",
                                            sep = "},{" )
+
         }
 
     }
@@ -179,12 +182,12 @@ write_rcsv <- function( table,
     )
 
     # now write the data out, appending below the head line
-    fwrite( input,
-            file = file,
-            append = TRUE,
-            sep = ",", sep2 = c( "", "|", "" ),
-            dateTimeAs = "write.csv",
-            col.names = TRUE
+    data.table::fwrite( x,
+                        file = file,
+                        append = TRUE,
+                        sep = ",", sep2 = c( "", "|", "" ),
+                        dateTimeAs = "write.csv",
+                        col.names = TRUE
     )
 
 }
