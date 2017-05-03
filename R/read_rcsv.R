@@ -30,11 +30,20 @@ read_rcsv <- function( file ) {
 
     column.classes <- gsub( ".*colclass:|}.*", "", header )
 
+    cols.toconvert <- grep( "\\{from:", header )
+
     column.classes.readin <- column.classes
-    column.classes.tofollowup <- which( column.classes.readin %chin%
-                                            c( "POSIXct", "Date", "factor",
-                                               "times", "ITime", "logical" ) )
-    column.classes.readin[ column.classes.tofollowup ] <- "character"
+    column.classes.readin[ cols.toconvert ] <-
+        gsub( ".*from:|}.*", "", header[ grepl( "\\{from:", header ) ] )
+    # a few particular `from` parameters should be read in differently to how
+    # they're passed
+    column.classes.readin[ column.classes.readin == "factorints" ] <- "integer"
+    column.classes.readin[ column.classes.readin %in% c( "short", "long" ) ] <- "character"
+
+    # column.classes.tofollowup <- which( column.classes.readin %chin%
+    #                                         c( "POSIXct", "Date", "factor",
+    #                                            "times", "ITime", "logical" ) )
+    # column.classes.readin[ column.classes.tofollowup ] <- "character"
 
     output <- data.table::fread( file = file,
                                  skip = head.lines,
@@ -44,7 +53,7 @@ read_rcsv <- function( file ) {
     )
 
     # adjust all non-list columns to the classes they should be
-    for( col in column.classes.tofollowup ) {
+    for( col in cols.toconvert ) {
         col.class <- column.classes[ col ]
         convert.from <- gsub( ".*from:|}.*", "", header[ col ] )
 
@@ -104,7 +113,7 @@ read_rcsv <- function( file ) {
 
         } else if( col.class == "logical" ) {
 
-            if( convert.from %chin% c( "long", "short" ) ) {
+            if( convert.from %chin% c( "long", "short", "integer" ) ) {
                 output[ , ( col ) := as.logical( .SD[[col]] ) ]
             } else {
                 warning( paste0( "Don't know how to convert logical column `",
@@ -156,20 +165,27 @@ read_rcsv <- function( file ) {
                                              labels = factor.levels ) ]
             }
 
+        } else if( col.class == "character" ) {
+            if( convert.from == "factorints" ) {
+                factor.levels <- gsub( ".*levels:|}.*", "", header[ col ] )
+                factor.levels <- unlist( strsplit( factor.levels, "," ) )
+                output[ , ( col ) := factor( .SD[[col]], labels = factor.levels ) ]
+                output[ , ( col ) := as.character( .SD[[col]] ) ]
+            }
         }
 
     }
 
     # also follow up on character columns still needing conversion
-    char.cols <- which( column.classes == "character" )
-    convert.from <- gsub( ".*from:|}.*", "", header[ char.cols ] )
-    for( col in char.cols[ convert.from == "factorints" ] ) {
-        factor.levels <- gsub( ".*levels:|}.*", "", header[ col ] )
-        factor.levels <- unlist( strsplit( factor.levels, "," ) )
-        output[ , ( col ) := as.integer( .SD[[col]] ) ]
-        output[ , ( col ) := factor( .SD[[col]], labels = factor.levels ) ]
-        output[ , ( col ) := as.character( .SD[[col]] ) ]
-    }
+    # char.cols <- which( column.classes == "character" )
+    # convert.from <- gsub( ".*from:|}.*", "", header[ char.cols ] )
+    # for( col in char.cols[ convert.from == "factorints" ] ) {
+    #     factor.levels <- gsub( ".*levels:|}.*", "", header[ col ] )
+    #     factor.levels <- unlist( strsplit( factor.levels, "," ) )
+    #     output[ , ( col ) := as.integer( .SD[[col]] ) ]
+    #     output[ , ( col ) := factor( .SD[[col]], labels = factor.levels ) ]
+    #     output[ , ( col ) := as.character( .SD[[col]] ) ]
+    # }
 
     # adjust list columns to make list elements the classes they should be
     # for( col in which( grepl( "^list", column.classes ) ) ) {

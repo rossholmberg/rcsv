@@ -8,7 +8,8 @@ write_rcsv(table, file, strings.convert = FALSE,
   strings.as.factor.ints = strings.convert,
   factors.as.ints = strings.convert, dates.as.ints = strings.convert,
   posix.as.num = strings.convert, times.as.num = strings.convert,
-  ITimes.as.ints = strings.convert, logical.short = strings.convert)
+  ITimes.as.ints = strings.convert, logical.short = ifelse(strings.convert,
+  "integer", "long"))
 }
 \arguments{
 \item{table}{a data.table or data.frame object to write out}
@@ -38,8 +39,11 @@ converting times to character, therefore only storing precision to seconds}
 \item{ITimes.as.ints}{logical, write `ITime` columns to file as
 integers. May save space on disk}
 
-\item{logical.short}{shorten logical values as "T" or "F" instead of
-"TRUE" or "FALSE". May save space on disk.}
+\item{logical.short}{"long", "short", or "integer". How to store logical values.
+"short" shortens logical values as "T" or "F" instead of "TRUE" or "FALSE"
+"integer" stores logical values as 1 or 0, instead of "TRUE" or "FALSE".
+"long" leaves the logical values as is, therefore storing tham as "TRUE" or "FALSE"
+May save space on disk}
 }
 \description{
 an extension of the csv file format
