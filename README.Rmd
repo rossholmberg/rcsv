@@ -4,53 +4,69 @@ output: html_document
 ---
 
 ```{r}
-n <- 100
+library( rcsv )
+library( data.table )
+library( dplyr )
+library( readr )
+library( ggplot2 )
+```
+
+
+```{r}
+n <- 100000
 df <- data.frame(
     integers = 1:n,
     letters = sample( letters, n, replace = TRUE ),
     dates = seq.Date( as.Date( "2000-01-01" ), by = 1, length.out = n ),
-    posix = seq.POSIXt( as.POSIXct( "2000-01-01 10:00:00" ), by = 1000, length.out = n ),
-    itime = setattr( 1:n, "class", "ITime" ),
+    posix = seq.POSIXt( as.POSIXct( "2000-01-01 10:00:00", tz = "UTC" ), by = 1000, length.out = n ),
+    itime = setattr( sample( seq_len( 86399 ), n, replace = TRUE ), "class", "ITime" ),
     logical = sample( c( TRUE, FALSE ), n, replace = T ),
+    factor = factor( sample( c( "new", "old", "other", "really" ), n, replace = TRUE ) ),
     stringsAsFactors = FALSE
 )
 ```
 
 ```{r}
-microbenchmark::microbenchmark(
-    convert = rcsv::write_rcsv( df, "READMEfiles/rcsv_convert_TRUE.rcsv", strings.convert = TRUE ),
-    noconvert = rcsv::write_rcsv( df, "READMEfiles/rcsv_convert_FALSE.rcsv", strings.convert = FALSE ),
-    dt.fwrite = fwrite( df, "READMEfiles/fwrite.csv", dateTimeAs = "write.csv" ),
+write.times <- microbenchmark::microbenchmark(
+    rcsv.convert = rcsv::write_rcsv( df, "READMEfiles/rcsv_convert_TRUE.rcsv", strings.convert = TRUE ),
+    rcsv.noconvert = rcsv::write_rcsv( df, "READMEfiles/rcsv_convert_FALSE.rcsv", strings.convert = FALSE ),
+    dt.fwrite = data.table::fwrite( df, "READMEfiles/fwrite.csv", dateTimeAs = "write.csv" ),
     base.write = write.csv( df, "READMEfiles/base_write.csv" ),
     readr.write = readr::write_csv( df, "READMEfiles/readr_write.csv" ),
-times = 10 )
+times = 10, unit = "seconds" )
+ggplot( write.times, aes( expr, time, colour = expr ) ) +
+    geom_violin( show.legend = FALSE ) +
+    geom_jitter( size = 1, alpha = 0.4, width = 0.25, show.legend = FALSE ) +
+    ylab( "write time (s)" ) + xlab( "" ) +
+    scale_y_log10()
 ```
 
 ```{r}
-subset(
-    file.info( list.files( "READMEfiles/", full.names = TRUE ) ),
-    select = 1
-)
+files <- list.files( "READMEfiles/", full.names = TRUE )
+sizes <- file.info( files )$size
+ggplot( data = data.frame( files = gsub( ".*\\/|\\..*", "", files ), size = sizes ),
+        mapping = aes( files, sizes ) ) +
+    geom_col() +
+    labs( title = "File sizes on disk." )
 ```
 
 ```{r, message=FALSE, warning=FALSE}
-microbenchmark::microbenchmark(
-    convert = { foo.convert <- rcsv::read_rcsv( "READMEfiles/rcsv_convert_TRUE.rcsv" ) },
-    noconvert = { foo.noconvert <- rcsv::read_rcsv( "READMEfiles/rcsv_convert_FALSE.rcsv" ) },
-    dt.fread = { foo.fread <- fread( "READMEfiles/fwrite.csv" ) },
-    base.read = { foo.base <- read.csv( "READMEfiles/base_write.csv" ) },
-    readr.read = { foo.readr <- readr::read_csv( "READMEfiles/readr_write.csv" ) },
-times = 10 )
+read.times <- microbenchmark::microbenchmark(
+    convert = { df.convert <- rcsv::read_rcsv( "READMEfiles/rcsv_convert_TRUE.rcsv" ) },
+    noconvert = { df.noconvert <- rcsv::read_rcsv( "READMEfiles/rcsv_convert_FALSE.rcsv" ) },
+    dt.fread = { df.fread <- fread( "READMEfiles/fwrite.csv" ) },
+    base.read = { df.base <- read.csv( "READMEfiles/base_write.csv" ) },
+    readr.read = { df.readr <- readr::read_csv( "READMEfiles/readr_write.csv" ) },
+times = 10, unit = "seconds" )
+ggplot( read.times, aes( expr, time, colour = expr ) ) +
+  geom_violin( show.legend = FALSE ) +
+  geom_jitter( size = 1, alpha = 0.4, width = 0.25, show.legend = FALSE ) +
+  ylab( "read time (s)" ) + xlab( "" )
 ```
 
-
-
-
-
-
-
+Test for correct data read.
 ```{r}
-ret <- read_rcsv( "READMEfiles/test.rcsv" )
-ret2 <- rcsv::read_rcsv( "test2.rcsv" )
+x <- copy( df.convert )
+sapply( seq_along( df ), function(i) all.equal( df[[i]], x[[i]] ) )
 ```
 
