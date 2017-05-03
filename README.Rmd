@@ -1,0 +1,41 @@
+---
+title: "Untitled"
+output: html_document
+---
+
+```{r}
+n <- 100
+df <- data.frame(
+    a = 1:n,
+    b = sample( letters, n, replace = TRUE ),
+    c = seq.Date( as.Date( "2000-01-01" ), by = 1, length.out = n ),
+    d = seq.POSIXt( as.POSIXct( "2000-01-01 10:00:00" ), by = 1000, length.out = n ),
+    e = setattr( 1:n, "class", "ITime" ),
+    f = sample( c( TRUE, FALSE ), n, replace = T ),
+    stringsAsFactors = FALSE
+)
+```
+
+```{r}
+write_rcsv( df, "READMEfiles/test.rcsv", strings.convert = TRUE )
+rcsv::write_rcsv( df, "READMEfiles/test2.rcsv", strings.convert = FALSE )
+```
+
+```{r}
+system( 'head READMEfiles/test.rcsv' )
+```
+
+
+```{r}
+subset(
+    file.info( paste0( "READMEfiles/test", c( ".rcsv", "2.rcsv" ) ) ),
+    select = 1
+)
+```
+
+
+```{r}
+ret <- read_rcsv( "READMEfiles/test.rcsv" )
+ret2 <- rcsv::read_rcsv( "test2.rcsv" )
+```
+
