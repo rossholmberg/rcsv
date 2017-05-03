@@ -6,32 +6,47 @@ output: html_document
 ```{r}
 n <- 100
 df <- data.frame(
-    a = 1:n,
-    b = sample( letters, n, replace = TRUE ),
-    c = seq.Date( as.Date( "2000-01-01" ), by = 1, length.out = n ),
-    d = seq.POSIXt( as.POSIXct( "2000-01-01 10:00:00" ), by = 1000, length.out = n ),
-    e = setattr( 1:n, "class", "ITime" ),
-    f = sample( c( TRUE, FALSE ), n, replace = T ),
+    integers = 1:n,
+    letters = sample( letters, n, replace = TRUE ),
+    dates = seq.Date( as.Date( "2000-01-01" ), by = 1, length.out = n ),
+    posix = seq.POSIXt( as.POSIXct( "2000-01-01 10:00:00" ), by = 1000, length.out = n ),
+    itime = setattr( 1:n, "class", "ITime" ),
+    logical = sample( c( TRUE, FALSE ), n, replace = T ),
     stringsAsFactors = FALSE
 )
 ```
 
 ```{r}
-write_rcsv( df, "READMEfiles/test.rcsv", strings.convert = TRUE )
-rcsv::write_rcsv( df, "READMEfiles/test2.rcsv", strings.convert = FALSE )
+microbenchmark::microbenchmark(
+    convert = rcsv::write_rcsv( df, "READMEfiles/rcsv_convert_TRUE.rcsv", strings.convert = TRUE ),
+    noconvert = rcsv::write_rcsv( df, "READMEfiles/rcsv_convert_FALSE.rcsv", strings.convert = FALSE ),
+    dt.fwrite = fwrite( df, "READMEfiles/fwrite.csv", dateTimeAs = "write.csv" ),
+    base.write = write.csv( df, "READMEfiles/base_write.csv" ),
+    readr.write = readr::write_csv( df, "READMEfiles/readr_write.csv" ),
+times = 10 )
 ```
-
-```{r}
-system( 'head READMEfiles/test.rcsv' )
-```
-
 
 ```{r}
 subset(
-    file.info( paste0( "READMEfiles/test", c( ".rcsv", "2.rcsv" ) ) ),
+    file.info( list.files( "READMEfiles/", full.names = TRUE ) ),
     select = 1
 )
 ```
+
+```{r, message=FALSE, warning=FALSE}
+microbenchmark::microbenchmark(
+    convert = { foo.convert <- rcsv::read_rcsv( "READMEfiles/rcsv_convert_TRUE.rcsv" ) },
+    noconvert = { foo.noconvert <- rcsv::read_rcsv( "READMEfiles/rcsv_convert_FALSE.rcsv" ) },
+    dt.fread = { foo.fread <- fread( "READMEfiles/fwrite.csv" ) },
+    base.read = { foo.base <- read.csv( "READMEfiles/base_write.csv" ) },
+    readr.read = { foo.readr <- readr::read_csv( "READMEfiles/readr_write.csv" ) },
+times = 10 )
+```
+
+
+
+
+
 
 
 ```{r}
