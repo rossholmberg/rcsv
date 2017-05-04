@@ -22,11 +22,8 @@
 #' converting times to character, therefore only storing precision to seconds
 #' @param ITimes.as.ints logical, write `ITime` columns to file as
 #' integers. May save space on disk
-#' @param logical.short "long", "short", or "integer". How to store logical values.
-#' "short" shortens logical values as "T" or "F" instead of "TRUE" or "FALSE"
-#' "integer" stores logical values as 1 or 0, instead of "TRUE" or "FALSE".
-#' "long" leaves the logical values as is, therefore storing tham as "TRUE" or "FALSE"
-#' May save space on disk
+#' @param logical.convert one of "int"/TRUE (store as integers), "short" (shorten
+#' to "T" or "F") or "long"/FALSE (leave as is). May save space on disk.
 #'
 #' @import data.table
 #' @importFrom chron times
@@ -42,8 +39,9 @@ write_rcsv <- function( table,
                         posix.as.num = strings.convert,
                         times.as.num = strings.convert,
                         ITimes.as.ints = strings.convert,
-                        logical.short = ifelse( strings.convert, "integer", "long" ) ) {
+                        logical.convert = strings.convert ) {
 
+    logical.as.int <- FALSE
 
     # make sure the input object qualifies as a data frame
     if( !"data.frame" %chin% class( table ) ) {
@@ -110,24 +108,27 @@ write_rcsv <- function( table,
     # add a shortened form logical if requested
     if( "logical" %chin% column.classes ) {
         logical.cols <- which( column.classes == "logical" )
-        if( logical.short == "integer" ) {
-            for( col in logical.cols ) {
-                input[ , ( col ) := as.integer( .SD[[col]] ) ]
-            }
+        if( logical.convert ||
+            logical.convert %chin% c( "int", "integer", "number", "numeric", "num" ) ) {
+            logical.as.int <- TRUE
             header[ logical.cols ] <- paste( header[ logical.cols ],
                                              "from:integer",
                                              sep = "},{" )
-        } else if( logical.short == "short" ) {
+        } else if( logical.convert %chin% c( "short", "shrt" ) ) {
             for( col in logical.cols ) {
                 input[ , ( col ) := substr( as.character( .SD[[col]] ), 0, 1 ) ]
             }
             header[ logical.cols ] <- paste( header[ logical.cols ],
                                             "from:short",
                                             sep = "},{" )
-        } else {
+        } else if( !logical.convert || logical.convert %chin% c( "long", "lng" ) ) {
             header[ logical.cols ] <- paste( header[ logical.cols ],
                                             "from:long",
                                             sep = "},{" )
+        } else {
+            stop(
+                sprintf( "%s is not a valid input for `logical.convert`", logical.convert )
+            )
         }
 
     }
@@ -187,7 +188,7 @@ write_rcsv <- function( table,
 
     }
 
-    # convert any columns of `timeas` class to character or numeric before writing
+    # convert any columns of `times` class to character or numeric before writing
     if( "times" %chin% column.classes ) {
         times.cols <- which( column.classes == "times" )
         if( times.as.num ) {
@@ -198,6 +199,9 @@ write_rcsv <- function( table,
                                            "from:numeric",
                                            sep = "},{" )
         } else {
+            for( col in times.cols ) {
+                input[ , ( col ) := as.character( .SD[[col]] ) ]
+            }
             header[ times.cols ] <- paste( header[ times.cols ],
                                            "from:string",
                                            sep = "},{" )
@@ -215,6 +219,9 @@ write_rcsv <- function( table,
                                            "from:integer",
                                            sep = "},{" )
         } else {
+            for( col in ITime.cols ) {
+                input[ , ( col ) := as.character( .SD[[col]] ) ]
+            }
             header[ ITime.cols ] <- paste( header[ ITime.cols ],
                                            "from:string",
                                            sep = "},{" )
@@ -231,6 +238,9 @@ write_rcsv <- function( table,
                                           "from:integer",
                                           sep = "},{" )
         } else {
+            for( col in date.cols ) {
+                input[ , ( col ) := as.character( .SD[[col]] ) ]
+            }
             header[ date.cols ] <- paste( header[ date.cols ],
                                           "from:string",
                                           sep = "},{" )
@@ -253,6 +263,7 @@ write_rcsv <- function( table,
                         append = TRUE,
                         sep = ",", sep2 = c( "", "|", "" ),
                         dateTimeAs = "write.csv",
+                        logicalAsInt = logical.as.int,
                         col.names = TRUE
     )
 

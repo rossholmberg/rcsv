@@ -1,9 +1,28 @@
 ---
-title: "Untitled"
-output: html_document
+title: "rcsv"
+author: "Ross Holmberg"
+date: "04 May 2017"
+output:
+  md_document:
+    variant: markdown_github
 ---
 
-```{r}
+<!-- Do not edit README.md directly, edit README.Rmd instead and re-knit before commit -->
+
+```{r, echo = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  fig.path = "READMEfigs/"
+)
+```
+
+
+#### The rcsv format.
+
+The basic idea behind this format is to add a header section to the regular, containing the information needed about a 
+
+```{r, message=FALSE, warning=FALSE}
 library( rcsv )
 library( data.table )
 library( dplyr )
@@ -11,9 +30,13 @@ library( readr )
 library( ggplot2 )
 ```
 
+#### Set up some test data
 
+We'll look at a test data frame, using several different column types. The `rcsv` package is specifically designed to work with the following column types, while others may or may not work well (please do your own testing):
+character, numeric, integer, logical, factor, Date, POSIXct, ITime, IDate, times
 ```{r}
-n <- 100000
+n <- 1E3
+set.seed( 123 )
 df <- data.frame(
     integers = 1:n,
     letters = sample( letters, n, replace = TRUE ),
@@ -26,19 +49,27 @@ df <- data.frame(
 )
 ```
 
+
 ```{r}
 write.times <- microbenchmark::microbenchmark(
-    rcsv.convert = rcsv::write_rcsv( df, "READMEfiles/rcsv_convert_TRUE.rcsv", strings.convert = TRUE ),
-    rcsv.noconvert = rcsv::write_rcsv( df, "READMEfiles/rcsv_convert_FALSE.rcsv", strings.convert = FALSE ),
-    dt.fwrite = data.table::fwrite( df, "READMEfiles/fwrite.csv", dateTimeAs = "write.csv" ),
     base.write = write.csv( df, "READMEfiles/base_write.csv" ),
     readr.write = readr::write_csv( df, "READMEfiles/readr_write.csv" ),
-times = 10, unit = "seconds" )
+    dt.fwrite = data.table::fwrite( df, "READMEfiles/fwrite.csv", dateTimeAs = "write.csv" ),
+    rcsv.noconvert = rcsv::write_rcsv( df, "READMEfiles/rcsv_convert_FALSE.rcsv", strings.convert = FALSE ),
+    rcsv.convert = rcsv::write_rcsv( df, "READMEfiles/rcsv_convert_TRUE.rcsv", strings.convert = TRUE ),
+times = 30, unit = "ms", control = list( warmup = 10 ) )
+write.times
+```
+
+Plot those datapoints for a better decription of the timing differences. Note we are using a log10 scale for the y axis here.
+```{r}
 ggplot( write.times, aes( expr, time, colour = expr ) ) +
     geom_violin( show.legend = FALSE ) +
     geom_jitter( size = 1, alpha = 0.4, width = 0.25, show.legend = FALSE ) +
-    ylab( "write time (s)" ) + xlab( "" ) +
-    scale_y_log10()
+    ylab( "write time (ns)" ) + xlab( "" ) +
+    # scale_y_log10( limits = c( 0, NA_real_ ) ) +
+    labs( title = "File write times (log10 y scale).",
+          subtitle = sprintf( "%s row by %s column data frame.", n, ncol( df ) ) )
 ```
 
 ```{r}
@@ -52,21 +83,38 @@ ggplot( data = data.frame( files = gsub( ".*\\/|\\..*", "", files ), size = size
 
 ```{r, message=FALSE, warning=FALSE}
 read.times <- microbenchmark::microbenchmark(
-    convert = { df.convert <- rcsv::read_rcsv( "READMEfiles/rcsv_convert_TRUE.rcsv" ) },
-    noconvert = { df.noconvert <- rcsv::read_rcsv( "READMEfiles/rcsv_convert_FALSE.rcsv" ) },
-    dt.fread = { df.fread <- fread( "READMEfiles/fwrite.csv" ) },
     base.read = { df.base <- read.csv( "READMEfiles/base_write.csv" ) },
     readr.read = { df.readr <- readr::read_csv( "READMEfiles/readr_write.csv" ) },
-times = 10, unit = "seconds" )
+    dt.fread = { df.fread <- fread( "READMEfiles/fwrite.csv" ) },
+    noconvert = { df.noconvert <- rcsv::read_rcsv( "READMEfiles/rcsv_convert_FALSE.rcsv" ) },
+    convert = { df.convert <- rcsv::read_rcsv( "READMEfiles/rcsv_convert_TRUE.rcsv" ) },
+times = 30, unit = "s" )
+read.times
+```
+
+Plot those datapoints for a better decription of the timing differences. Note we are using a log10 scale for the y axis here.
+```{r}
 ggplot( read.times, aes( expr, time, colour = expr ) ) +
-  geom_violin( show.legend = FALSE ) +
-  geom_jitter( size = 1, alpha = 0.4, width = 0.25, show.legend = FALSE ) +
-  ylab( "read time (s)" ) + xlab( "" )
+    geom_violin( show.legend = FALSE ) +
+    geom_jitter( size = 1, alpha = 0.4, width = 0.25, show.legend = FALSE ) +
+    ylab( "read time (ns)" ) + xlab( "" ) +
+    labs( title = "File read times (log10 y scale)",
+          subtitle = sprintf( "%s row by %s column data frame.", n, ncol( df ) ) ) +
+    scale_y_log10()
 ```
 
 Test for correct data read.
 ```{r}
-x <- copy( df.convert )
-sapply( seq_along( df ), function(i) all.equal( df[[i]], x[[i]] ) )
+tests <- lapply( X = list( df.convert = df.convert,
+                           df.noconvert = df.noconvert,
+                           df.fread = df.fread,
+                           df.base = df.base,
+                           df.readr = df.readr ),
+                 FUN = function(x) {
+                     sapply( seq_along( df ),
+                             function(i) all.equal( df[[i]], x[[i]] )
+                     )
+                 }
+)
 ```
 

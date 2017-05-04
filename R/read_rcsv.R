@@ -15,8 +15,13 @@ read_rcsv <- function( file ) {
 
     .SD <- NULL
 
-    head.line <- readLines( con = file, n = 1 )
+    # open a connection to the file
+    con <- file( file, "r" )
 
+    # read in a single line, this will contain the number of header lines
+    head.line <- readLines( con = con, n = 1 )
+
+    # check for the tag verifying this file as an rcsv file
     if( !grepl( "rcsvHeader", head.line ) ) {
         stop( "This is not an rcsv file, consider using a different file reader." )
     }
@@ -24,7 +29,9 @@ read_rcsv <- function( file ) {
     head.lines <- as.integer( gsub( ".*headlines:|}.*", "", head.line ) )
     body.rows <- as.integer( gsub( ".*tablerows:|}.*", "", head.line ) )
 
-    header <- readLines( con = file, n = head.lines )[ -1L ]
+    # read in the header, and close the file connection
+    header <- readLines( con = con, n = head.lines )[ -1L ]
+    close( con )
 
     column.names <- gsub( ".*colname:|}.*", "", header )
 
