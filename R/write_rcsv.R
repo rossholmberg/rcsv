@@ -108,8 +108,10 @@ write_rcsv <- function( table,
     # add a shortened form logical if requested
     if( "logical" %chin% column.classes ) {
         logical.cols <- which( column.classes == "logical" )
-        if( logical.convert ||
-            logical.convert %chin% c( "int", "integer", "number", "numeric", "num" ) ) {
+        if( isTRUE( logical.convert ) ||
+            { !is.logical( logical.convert ) &&
+            logical.convert %chin% c( "int", "integer", "number", "numeric", "num" ) }
+        ) {
             logical.as.int <- TRUE
             header[ logical.cols ] <- paste( header[ logical.cols ],
                                              "from:integer",
