@@ -34,7 +34,7 @@ glimpse_rcsv <- function( file, width = 80 ) {
     col.classes[ col.classes == "integer" ] <- "int"
     col.classes[ col.classes == "character" ] <- "char"
     col.classes[ col.classes == "nueric" ] <- "dbl"
-    col.classes[ col.classes == "logical" ] <- "lgic"
+    col.classes[ col.classes == "logical" ] <- "logi"
     col.classes[ col.classes == "Date" ] <- "date"
     col.classes[ col.classes == "POSIXct" ] <- "posx"
     col.classes[ col.classes == "ITime" ] <- "itim"
@@ -56,7 +56,7 @@ glimpse_rcsv <- function( file, width = 80 ) {
         substr( data, 0, width - 16 ), "..."
     )
 
-    cat( paste( strings, collapse = "\n" ), "\n" )
+    cat( "\n\n", paste( strings, collapse = "\n " ), "\n" )
 
     return( invisible( TRUE ) )
 
