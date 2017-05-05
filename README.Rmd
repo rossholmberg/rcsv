@@ -138,7 +138,7 @@ To see the file size and speed advantages, we'll create a more meaningful (bigge
 ## File write speeds
 
 ```{r}
-n <- 1E5
+n <- 1E6
 df <- testDF( n )
 write.times <- microbenchmark::microbenchmark(
     base.write = write.csv( df, "READMEfiles/base_write.csv" ),
@@ -146,7 +146,7 @@ write.times <- microbenchmark::microbenchmark(
     dt.fwrite = data.table::fwrite( df, "READMEfiles/dt_fwrite.csv", dateTimeAs = "write.csv" ),
     rcsv.noconvert = rcsv::write_rcsv( df, "READMEfiles/rcsv_convert_FALSE.rcsv", strings.convert = FALSE ),
     rcsv.convert = rcsv::write_rcsv( df, "READMEfiles/rcsv_convert_TRUE.rcsv", strings.convert = TRUE ),
-times = 10, control = list( warmup = 10 ) )
+times = 30, control = list( warmup = 10 ) )
 ggplot( write.times, aes( expr, time/1E9, colour = expr ) ) +
     geom_violin( show.legend = FALSE ) +
     geom_jitter( size = 1, alpha = 0.4, width = 0.25, show.legend = FALSE ) +
