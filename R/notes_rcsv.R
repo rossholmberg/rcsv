@@ -1,8 +1,8 @@
 
 #'
-#' @title names_rcsv
-#' @description extract column names from an rcsv file
-#' @details  extract column names from an rcsv file without loading
+#' @title notes_rcsv
+#' @description extract notes from an rcsv file
+#' @details extract notes from an rcsv file without loading
 #' the entire file into memory
 #'
 #' @param file file path from which the rscv will be read
@@ -10,7 +10,7 @@
 #' @export
 
 
-names_rcsv <- function( file ) {
+notes_rcsv <- function( file ) {
     # open a connection to the file
     con <- file( file, "r" )
 
@@ -25,14 +25,12 @@ names_rcsv <- function( file ) {
     notes.lines.num <- as.integer( gsub( ".*noteslines:|}.*", "", head.line ) )
     notes <- readLines( con = con, n = notes.lines.num )
 
-    colref.lines <- as.integer( gsub( ".*colreflines:|}.*", "", head.line ) )
-
-    # read in the header, and close the file connection
-    header <- readLines( con = con, n = colref.lines )
     close( con )
 
-    # extract the column names from the header information
-    column.names <- gsub( ".*colname:|}.*", "", header )
+    notes <- gsub( ".*notes:|}.*", "", notes )
 
-    return( column.names )
+    cat( "Note: ", paste( notes, collapse = "\n\t" ) )
+
+    return( invisible( notes ) )
+
 }

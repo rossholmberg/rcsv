@@ -8,7 +8,8 @@ write_rcsv(table, file, strings.convert = FALSE,
   strings.as.factor.ints = strings.convert,
   factors.as.ints = strings.convert, dates.as.ints = strings.convert,
   posix.as.num = strings.convert, times.as.num = strings.convert,
-  ITimes.as.ints = strings.convert, logical.convert = strings.convert)
+  ITimes.as.ints = strings.convert, logical.convert = strings.convert,
+  notes = attr(table, "notes"))
 }
 \arguments{
 \item{table}{a data.table or data.frame object to write out}
@@ -38,8 +39,12 @@ converting times to character, therefore only storing precision to seconds}
 \item{ITimes.as.ints}{logical, write `ITime` columns to file as
 integers. May save space on disk}
 
-\item{logical.convert}{one of "int"/TRUE (store as integers), "short" (shorten
-to "T" or "F") or "long"/FALSE (leave as is). May save space on disk.}
+\item{logical.convert}{one of "int"/TRUE to store as integers, "short" to shorten
+to "T" or "F", or "long"/FALSE to leave unchanged. May save space on disk}
+
+\item{notes}{single line of text. Add notes to the dataset. Will be displayed in
+the console when data is impoted by `read_rcsv`, and stored in the imported data frame
+as an attribute "notes". By default, any existing "notes" attribute is stored here.}
 }
 \description{
 an extension of the csv file format

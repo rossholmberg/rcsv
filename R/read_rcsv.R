@@ -13,7 +13,7 @@
 
 read_rcsv <- function( file, subset = NULL ) {
 
-    .SD <- NULL
+    .SD <- notes <- NULL
 
     # open a connection to the file
     con <- file( file, "r" )
@@ -27,10 +27,16 @@ read_rcsv <- function( file, subset = NULL ) {
     }
 
     head.lines <- as.integer( gsub( ".*headlines:|}.*", "", head.line ) )
+    colref.lines <- as.integer( gsub( ".*colreflines:|}.*", "", head.line ) )
+    if( grepl( "notes", head.line ) ) {
+        notes.lines <- as.integer( gsub( ".*noteslines:|}.*", "", head.line ) )
+        notes <- readLines( con = con, n = notes.lines )
+    }
+
     body.rows <- as.integer( gsub( ".*tablerows:|}.*", "", head.line ) )
 
     # read in the header, and close the file connection
-    header <- readLines( con = con, n = head.lines - 1L )
+    header <- readLines( con = con, n = colref.lines )
     close( con )
     header.forinput <- header
 
@@ -231,6 +237,17 @@ read_rcsv <- function( file, subset = NULL ) {
         }
 
     }
+
+    # add any notes as an attribute before returning to the user
+    if( !is.null( notes ) ) {
+        notes <- gsub( ".*notes:|}.*", "", notes )
+        setattr( output, "notes", notes )
+
+        # also print those notes to the console
+        cat( "Notes: ", paste( notes, collapse = "\n\t" ) )
+
+    }
+
 
     return( output )
 

@@ -22,8 +22,12 @@
 #' converting times to character, therefore only storing precision to seconds
 #' @param ITimes.as.ints logical, write `ITime` columns to file as
 #' integers. May save space on disk
-#' @param logical.convert one of "int"/TRUE (store as integers), "short" (shorten
-#' to "T" or "F") or "long"/FALSE (leave as is). May save space on disk.
+#' @param logical.convert one of "int"/TRUE to store as integers, "short" to shorten
+#' to "T" or "F", or "long"/FALSE to leave unchanged. May save space on disk
+#' @param notes single line of text. Add notes to the dataset. Will be displayed in
+#' the console when data is impoted by `read_rcsv`, and stored in the imported data frame
+#' as an attribute "notes". By default, any existing "notes" attribute is stored here.
+#'
 #'
 #' @import data.table
 #' @importFrom chron times
@@ -39,7 +43,8 @@ write_rcsv <- function( table,
                         posix.as.num = strings.convert,
                         times.as.num = strings.convert,
                         ITimes.as.ints = strings.convert,
-                        logical.convert = strings.convert ) {
+                        logical.convert = strings.convert,
+                        notes = attr( table, "notes" ) ) {
 
     logical.as.int <- FALSE
 
@@ -58,18 +63,6 @@ write_rcsv <- function( table,
     # make a copy of the input object. This is inefficient in terms of memory,
     # but will prevent data.table making in-place changes to the object.
     input <- data.table::copy( table )
-
-    # define how many lines are to be used in the header, and how many in the body
-    head.lines <- ncol( input ) + 1L
-    body.rows <- nrow( input )
-
-    # put that into a header line
-    head.line.readlines <- paste(
-        "rcsvHeader",
-        paste0( "headlines:", head.lines ),
-        paste0( "tablerows:", body.rows ),
-        sep = "},{"
-    )
 
     # find the column names
     column.names <- names( input )
@@ -249,11 +242,56 @@ write_rcsv <- function( table,
         }
     }
 
+
+
+    # also add a `notes` row
+    if( is.null( notes ) || length( notes ) == 0L ) {
+        notes <- NULL
+    } else if( grepl( "\n", notes ) ) {
+        # warning( "`notes` is being coerced to a single line" )
+        # notes <- gsub( "\n", " ", notes )
+        notes <- unlist( strsplit( notes, "\n" ) )
+    }
+
+    if( !is.null( notes ) ) {
+        notes <- paste0( "notes:", notes )
+    }
+
+    # define how many lines are to be used in the header, and how many in the body
+    head.lines <- ncol( input ) + 1L + length( notes )
+    body.rows <- nrow( input )
+
+    # put that into a header line
+    if( !is.null( notes ) ) {
+        head.line.readlines <- paste(
+            "rcsvHeader",
+            paste0( "headlines:", head.lines ),
+            paste0( "noteslines:", length( notes ) ),
+            paste0( "colreflines:", ncol( input ) ),
+            paste0( "tablerows:", body.rows ),
+            sep = "},{"
+        )
+        header <- paste0( "#{",
+                          c( head.line.readlines,
+                             notes,
+                             paste0( "colref:", seq_along( input ), "},{", header ) ),
+                          "}" )
+    } else {
+        head.line.readlines <- paste(
+            "rcsvHeader",
+            paste0( "headlines:", head.lines ),
+            paste0( "colreflines:", ncol( input ) ),
+            paste0( "tablerows:", body.rows ),
+            sep = "},{"
+        )
+        header <- paste0( "#{",
+                          c( head.line.readlines,
+                             paste0( "colref:", seq_along( input ), "},{", header ) ),
+                          "}" )
+    }
+
+
     # write the header to the output file
-    header <- paste0( "#{",
-                      c( head.line.readlines,
-                         paste0( "colref:", seq_along( input ), "},{", header ) ),
-                      "}" )
     cat( header,
          sep = "\n",
          file = file, append = FALSE
@@ -268,5 +306,11 @@ write_rcsv <- function( table,
                         logicalAsInt = logical.as.int,
                         col.names = TRUE
     )
+
+    if( !is.null( notes ) ) {
+        cat( "Notes: ", paste( sub( "^notes:", "", notes ), collapse = "\n\t" ) )
+    }
+
+    return( invisible( TRUE ) )
 
 }

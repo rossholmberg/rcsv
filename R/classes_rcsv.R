@@ -24,10 +24,13 @@ classes_rcsv <- function( file ) {
         stop( "This is not an rcsv file, consider using a different file reader." )
     }
 
-    head.lines <- as.integer( gsub( ".*headlines:|}.*", "", head.line ) )
+    colref.lines <- as.integer( gsub( ".*colreflines:|}.*", "", head.line ) )
+    notes.lines.num <- as.integer( gsub( ".*noteslines:|}.*", "", head.line ) )
+
+    notes <- readLines( con = con, n = notes.lines.num )
 
     # read in the header, and close the file connection
-    header <- readLines( con = con, n = head.lines - 1L )
+    header <- readLines( con = con, n = colref.lines )
     close( con )
 
     # extract the column classes from the header information
