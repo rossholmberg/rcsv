@@ -5,13 +5,13 @@
 #' stored in a header for more consistent reading into R
 #'
 #' @param file file path to which the rscv will be written
-#'
+#' @param subset integer vector of rows to read
 #' @import data.table
 #' @importFrom chron times
 #'
 #' @export
 
-read_rcsv <- function( file ) {
+read_rcsv <- function( file, subset = NULL ) {
 
     .SD <- NULL
 
@@ -30,18 +30,44 @@ read_rcsv <- function( file ) {
     body.rows <- as.integer( gsub( ".*tablerows:|}.*", "", head.line ) )
 
     # read in the header, and close the file connection
-    header <- readLines( con = con, n = head.lines )[ -1L ]
+    header <- readLines( con = con, n = head.lines - 1L )
     close( con )
+    header.forinput <- header
 
-    column.names <- gsub( ".*colname:|}.*", "", header )
+#     # subset columns if requested
+#     if( !is.null( select ) ) {
+#         ncols <- length( column.names )
+#         if( is.numeric( select ) ) {
+#             if( max( select ) > ncols ) {
+#                 stop( paste( "Selected column numbers out of range.\n",
+#                              ncols, " columns available.\n",
+#                              "Column names: ", column.names ) )
+#             }
+#         } else if( is.character( select ) ) {
+#             # make sure all requested columns are available
+#             if( sum( !select %chin% column.names ) > 0 ) {
+#                 stop( sprintf(
+#                     "Columns %s not available in file.",
+#                     paste( column.names[ !select %chin% column.names ],
+#                            collapse = ", " )
+#                 ) )
+#             } else {
+#                 select <- match( select, column.names )
+#             }
+#         }
+#         header <- header[ select ]
+#     }
 
-    column.classes <- gsub( ".*colclass:|}.*", "", header )
+    column.names <- gsub( ".*colname:|}.*", "", header.forinput )
 
-    cols.toconvert <- grep( "\\{from:", header )
+    column.classes <- gsub( ".*colclass:|}.*", "", header.forinput )
+
+    cols.toconvert <- grep( "\\{from:", header.forinput )
 
     column.classes.readin <- column.classes
     column.classes.readin[ cols.toconvert ] <-
-        gsub( ".*from:|}.*", "", header[ grepl( "\\{from:", header ) ] )
+        gsub( ".*from:|}.*", "",
+              header.forinput[ grepl( "\\{from:", header.forinput ) ] )
     # a few particular `from` parameters should be read in differently to how
     # they're passed
     column.classes.readin[ column.classes.readin == "factorints" ] <- "integer"
@@ -52,12 +78,29 @@ read_rcsv <- function( file ) {
     #                                            "times", "ITime", "logical" ) )
     # column.classes.readin[ column.classes.tofollowup ] <- "character"
 
+    if( !is.null( subset ) ) {
+        skip.lines <- head.lines + min( subset )
+        nrows <- max( subset ) - min( subset ) + 1L
+        subset <- subset - min( subset ) + 1L
+    } else {
+        skip.lines <- head.lines + 1L
+        nrows <- -1L
+    }
+
+
+
     output <- data.table::fread( file = file,
-                                 skip = head.lines,
+                                 skip = skip.lines,
                                  col.names = column.names,
                                  sep = ",", sep2 = c( "", "|", "" ),
-                                 colClasses = column.classes.readin
+                                 colClasses = column.classes.readin,
+                                 nrows = nrows,
+                                 header = FALSE
     )
+
+    if( !is.null( subset ) ) {
+        output <- output[ subset, ]
+    }
 
     # adjust all non-list columns to the classes they should be
     for( col in cols.toconvert ) {
@@ -164,6 +207,10 @@ read_rcsv <- function( file ) {
 
             factor.levels <- gsub( ".*levels:|}.*", "", header[ col ] )
             factor.levels <- unlist( strsplit( factor.levels, "," ) )
+            # subset the factor levels to only those present in this subset
+            if( !is.null( subset ) ) {
+                factor.levels <- factor.levels[ sort( unique( as.integer( output[[col]] ) ) ) ]
+            }
 
             if( convert.from == "string" ) {
                 output[ , ( col ) := factor( .SD[[col]], levels = factor.levels ) ]
@@ -172,61 +219,18 @@ read_rcsv <- function( file ) {
                                              labels = factor.levels ) ]
             }
 
-        } else if( col.class == "character" ) {
-            if( convert.from == "factorints" ) {
-                factor.levels <- gsub( ".*levels:|}.*", "", header[ col ] )
-                factor.levels <- unlist( strsplit( factor.levels, "," ) )
-                output[ , ( col ) := factor( .SD[[col]], labels = factor.levels ) ]
-                output[ , ( col ) := as.character( .SD[[col]] ) ]
+        } else if( col.class == "character" && convert.from == "factorints" ) {
+            factor.levels <- gsub( ".*levels:|}.*", "", header[ col ] )
+            factor.levels <- unlist( strsplit( factor.levels, "," ) )
+            # subset the factor levels to only those present in this subset
+            if( !is.null( subset ) ) {
+                factor.levels <- factor.levels[ sort( unique( as.integer( output[[col]] ) ) ) ]
             }
+            output[ , ( col ) := factor( .SD[[col]], labels = factor.levels ) ]
+            output[ , ( col ) := as.character( .SD[[col]] ) ]
         }
 
     }
-
-    # also follow up on character columns still needing conversion
-    # char.cols <- which( column.classes == "character" )
-    # convert.from <- gsub( ".*from:|}.*", "", header[ char.cols ] )
-    # for( col in char.cols[ convert.from == "factorints" ] ) {
-    #     factor.levels <- gsub( ".*levels:|}.*", "", header[ col ] )
-    #     factor.levels <- unlist( strsplit( factor.levels, "," ) )
-    #     output[ , ( col ) := as.integer( .SD[[col]] ) ]
-    #     output[ , ( col ) := factor( .SD[[col]], labels = factor.levels ) ]
-    #     output[ , ( col ) := as.character( .SD[[col]] ) ]
-    # }
-
-    # adjust list columns to make list elements the classes they should be
-    # for( col in which( grepl( "^list", column.classes ) ) ) {
-    #     # split the list elements
-    #     output[ , ( col ) := sapply( .SD[[col]], strsplit, split = "\\|" ) ]
-    #     # read the class for list elements from the head line
-    #     list.class <- gsub( "^list\\(|\\)$", "", column.classes[ col ] )
-    #
-    #     output[ , ( col ) := switch( EXPR = list.class,
-    #                                  "Date" = sapply( .SD[[col]], as.Date, format = "%Y-%m-%d" ),
-    #                                  "POSIXct" = sapply( .SD[[col]], as.POSIXct, format = "%Y-%m-%d %H:%M:%S" ),
-    #                                  "times" = sapply( .SD[[col]], function(x) {
-    #                                      if( is.na( suppressWarnings( as.numeric( x[1] ) ) ) ) {
-    #                                          chron::chron( times. = x, format = "h:m:s", out.format = "h:m:s" )
-    #                                      } else {
-    #                                          chron::chron( times. = x, out.format = "h:m:s" )
-    #                                      }
-    #                                  } ),
-    #                                  sapply( .SD[[col]], function(x) {
-    #                                      as( x, list.class )
-    #                                  } ) ) ]
-    # }
-
-
-    # # before returning to the user, check that all columns are now in the correct format
-    # output.col.classes <- lapply( output, class )
-    # output.col.classes <- sapply( output.col.classes, "[", 1L )
-    #
-    # # coerce any remaining columns to their appropriate format
-    # columns.toconvert <- which( output.col.classes != column.classes )
-    # for( col in columns.toconvert ) {
-    #     output[ , ( col ) := as( .SD[[col]], column.classes[ col ] ) ]
-    # }
-
 
     return( output )
 
