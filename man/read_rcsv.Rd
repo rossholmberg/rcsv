@@ -4,14 +4,12 @@
 \alias{read_rcsv}
 \title{read_rcsv}
 \usage{
-read_rcsv(file, subset = NULL, select = NULL)
+read_rcsv(file, subset = NULL)
 }
 \arguments{
 \item{file}{file path to which the rscv will be written}
 
 \item{subset}{integer vector of rows to read}
-
-\item{select}{integer or character vector of columns to import}
 }
 \description{
 an extension of the csv file format
