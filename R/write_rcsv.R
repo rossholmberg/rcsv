@@ -247,7 +247,7 @@ write_rcsv <- function( table,
     # also add a `notes` row
     if( is.null( notes ) || length( notes ) == 0L ) {
         notes <- NULL
-    } else if( grepl( "\n", notes ) ) {
+    } else if( sum( grepl( "\n", notes ) ) > 0 ) {
         # warning( "`notes` is being coerced to a single line" )
         # notes <- gsub( "\n", " ", notes )
         notes <- unlist( strsplit( notes, "\n" ) )
