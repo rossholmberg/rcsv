@@ -116,16 +116,16 @@ write_rcsv <- function( table,
             header[ logical.cols ] <- paste( header[ logical.cols ],
                                              "from:integer",
                                              sep = "},{" )
+        } else if( logical.convert == FALSE || logical.convert %chin% c( "long", "lng" ) ) {
+            header[ logical.cols ] <- paste( header[ logical.cols ],
+                                             "from:long",
+                                             sep = "},{" )
         } else if( logical.convert %chin% c( "short", "shrt" ) ) {
             for( col in logical.cols ) {
                 input[ , ( col ) := substr( as.character( .SD[[col]] ), 0, 1 ) ]
             }
             header[ logical.cols ] <- paste( header[ logical.cols ],
                                             "from:short",
-                                            sep = "},{" )
-        } else if( !logical.convert || logical.convert %chin% c( "long", "lng" ) ) {
-            header[ logical.cols ] <- paste( header[ logical.cols ],
-                                            "from:long",
                                             sep = "},{" )
         } else {
             stop(
