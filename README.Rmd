@@ -20,7 +20,7 @@ knitr::opts_chunk$set(
 
 #### The rcsv format.
 
-The basic idea behind this format is to add a header section to the regular csv format, containing the information needed about the object being stored. Specifically designed for storing data frame (or data table) objects, details stored in the header include the dimensions of the data frame, and the class of each column. This means that the data frame can be read back into memory when required, without the need to specify column classes on input, nor perform column manipulations after import. The data will be brought back into memory in (almost) exactly the form it was in when it was saved.
+The basic idea behind this format is to add a header section to the regular csv format, containing information about the data frame being stored, in such a way as to allow easy reading and writing of data to and from file, without losing the structure of the original data. Specifically designed for storing data frame (or data table) objects, details stored in the header include the dimensions of the data frame, and the class of each column. This means that the data frame can be read back into memory when required, without the need to specify column classes on input, nor perform column manipulations after import. The data will be brought back into memory in (almost) exactly the form it was in when it was saved.
 
 ```{r, message=FALSE, warning=FALSE}
 library( rcsv )
@@ -30,7 +30,7 @@ library( readr )
 library( ggplot2 )
 ```
 
-#### Why not rds, feather, fst...
+#### Why not rds, feather, fst...?
 
 Personally, I like to work with binary files, and not having to worry about things like classes, timezones, etc. However, these binary formats are often not suitable in certain workflows, for example where collaborators may not be working in R*. It can also be beneficial in certain workflows to have meaningful diffs when a data file is changed, in order to work with version control systems like git.
 
@@ -75,7 +75,7 @@ Note that at the top of this file though, is a (JSON-like) header:
 readLines( testfile, n = 12 )
 ```
 
-The first line of the file contains some basic details about the file structure, below which is a series of lines specifying details of each column. This "header" section will be used by `read_rcsv` to import the data frame in a manner matching the file written out.
+The first line of the file contains some basic details about the file structure, below which is a series of lines specifying details of each column. This "header" section will be used by `read_rcsv` to import the data frame in a manner matching the file written out, without the need for special parameters on the read call, or additional manipulations after import.
 ```{r}
 df.readrcsv <- read_rcsv( testfile )
 glimpse( df.readrcsv )
@@ -135,6 +135,8 @@ By converting columns in this way, we may save disk space, as well as speed up r
 
 To see the file size and speed advantages, we'll create a more meaningful (bigger) dataset, and write it to files with several different methods.
 
+## File write speeds
+
 ```{r}
 n <- 1E5
 df <- testDF( n )
@@ -156,6 +158,7 @@ ggplot( write.times, aes( expr, time/1E9, colour = expr ) ) +
 `write_rcsv` is built around `data.table::fwrite`, so the speed differences between `dt.fwrite`, `rcsv.noconvert`, and `rcsv.convert` seen here are the result of additional processing in the `write_rcsv` function (slowing it down), and the advantage of writing fewer characters to file (speeding it up where `strings.convert` == TRUE). Without string conversions, for data frames of a reasonable size, `rcsv` generally writes with comparable speed to `readr` and `base`, while turning the string conversions on can make it even faster than `fwrite` (which was a big surprise to me!).
 
 
+## File sizes
 
 ```{r}
 files <- list.files( path = "READMEfiles/", pattern = "*_", full.names = TRUE )
@@ -174,6 +177,8 @@ ggplot( data = data.frame( files = gsub( ".*\\/|\\..*", "", files ), size = size
 ```
 
 Note most csv writers create files of similar sizes, but the `rcsv` format with string conversions can (in some circumstances) result in significant file size reductions.
+
+## File read times
 
 ```{r, message=FALSE, warning=FALSE}
 read.times <- microbenchmark::microbenchmark(
@@ -216,7 +221,72 @@ tests <- lapply( X = list( df.convert = df.convert,
 print( tests )
 ```
 
-It's clear here that imports using regular csv readers will need some work to bring the data back to the way it should be. This manipulation needs to be repeated every time a dataset is read into memory, which can be quite prohibitive to a smooth workflow.
+It's clear here that imports using regular csv readers will need some work to bring the data back to the way it should be. This manipulation needs to be repeated every time a dataset is read into memory, which can be quite prohibitive to a smooth workflow. With `rcsv`, the data is read back into R in the same form as before it was written out, with no additional time or effort on the part of the user.
 
+#### Notes, an added detail to your datasets
 
+Sometimes it's important to include a few brief notes with your dataset. Maybe the specs for a piece of equipment used to collect the data, or maybe something that a user of the dataset should be aware of when working with it. The `rcsv` format has this facility built in. You can add a note to your data frame, which is stored as an attribute named `notes`.
+```{r}
+df <- testDF( 100 )
+notes_add( df, "here's the first note for this dataset" )
+```
+
+This note can be replaced, by using `notes_replace`, or we can add another note with `notes_add`
+```{r}
+notes_add( df, "this is my second note. There might be more." )
+```
+
+Each time a note is added, the full set of notes are printed to the console. This console print will also happen whenever the data is written to file...
+```{r}
+write_rcsv( df, testfile )
+```
+
+And whenever it is read from file.
+```{r}
+df <- read_rcsv( testfile )
+```
+
+These notes are stored in the file header in a human-readable way, meaning that they can be accessed even without the `rcsv` package.
+```{r}
+readLines( testfile, 3 )
+```
+
+#### Helper functions
+
+The `rcsv` package also includes several helper functions to work with rcsv files, without loading the entire dataset into memory. These functions are therefore very fast ways to access details on even very large data files.
+
+## glimpse_rcsv
+
+`glimpse_rcsv` displays a `dplyr::glimpse`-like view of the data, without loading the entire dataset into memory.
+```{r}
+glimpse_rcsv( testfile )
+```
+
+## dim_rcsv
+
+`dim_rcsv` returns the dimensions of the given dataset as a named vector, without loading the dataset itself.
+```{r}
+dim_rcsv( testfile )
+```
+
+## names_rcsv
+
+`names_rcsv` returns the column names, without loading the dataset.
+```{r}
+names_rcsv( testfile )
+```
+
+## classes_rcsv
+
+`classes_rcsv` returns the column classes as a named vector (column names are vector names), without loading the dataset.
+```{r}
+classes_rcsv( testfile )
+```
+
+## notes_rcsv
+
+`notes_rcsv` returns only the notes associated with a data file, without loading the dataset.
+```{r}
+notes_rcsv( testfile )
+```
 
