@@ -215,7 +215,7 @@ read_rcsv <- function( file, subset = NULL ) {
             factor.levels <- unlist( strsplit( factor.levels, "," ) )
             # subset the factor levels to only those present in this subset
             if( !is.null( subset ) ) {
-                factor.levels <- factor.levels[ sort( unique( as.integer( output[[col]] ) ) ) ]
+                factor.levels <- factor.levels[ factor.levels %chin% output[[col]] ]
             }
 
             if( convert.from == "string" ) {
