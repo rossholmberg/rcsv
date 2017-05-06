@@ -4,15 +4,15 @@
 \alias{write_rcsv}
 \title{write_rcsv}
 \usage{
-write_rcsv(table, file, strings.convert = FALSE,
+write_rcsv(input, file, strings.convert = FALSE,
   strings.as.factor.ints = strings.convert,
   factors.as.ints = strings.convert, dates.as.ints = strings.convert,
   posix.as.num = strings.convert, times.as.num = strings.convert,
   ITimes.as.ints = strings.convert, logical.convert = strings.convert,
-  notes = attr(table, "notes"))
+  notes = attr(input, "notes"))
 }
 \arguments{
-\item{table}{a data.table or data.frame object to write out}
+\item{input}{a data.table or data.frame object to write out}
 
 \item{file}{file path to which the rscv will be written}
 

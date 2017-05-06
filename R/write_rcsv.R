@@ -4,7 +4,7 @@
 #' @details write out an rcsv file, an extension of csv, with column format details
 #' stored in a header for more consistent reading into R
 #'
-#' @param table a data.table or data.frame object to write out
+#' @param input a data.table or data.frame object to write out
 #' @param file file path to which the rscv will be written
 #' @param strings.convert global switching of storage conversion types
 #' @param strings.as.factor.ints logical, convert strings to factors,
@@ -34,7 +34,7 @@
 #'
 #' @export
 
-write_rcsv <- function( table,
+write_rcsv <- function( input,
                         file,
                         strings.convert = FALSE,
                         strings.as.factor.ints = strings.convert,
@@ -44,25 +44,25 @@ write_rcsv <- function( table,
                         times.as.num = strings.convert,
                         ITimes.as.ints = strings.convert,
                         logical.convert = strings.convert,
-                        notes = attr( table, "notes" ) ) {
+                        notes = attr( input, "notes" ) ) {
 
     logical.as.int <- FALSE
 
     # make sure the input object qualifies as a data frame
-    if( !"data.frame" %chin% class( table ) ) {
-        convert.DT.attempt <- try( data.table::setDT( table ), silent = TRUE )
+    if( !"data.frame" %chin% class( input ) ) {
+        convert.DT.attempt <- try( data.table::setDT( input ), silent = TRUE )
         if( class( convert.DT.attempt ) == "try-error" ) {
         stop( "Object for writing could not be converted to a data frame." )
         } else {
             warning( "Object has been coerced to data frame for writing as rcsv." )
         }
     } else {
-        data.table::setDT( table )
+        data.table::setDT( input )
     }
 
-    # make a copy of the input object. This is inefficient in terms of memory,
-    # but will prevent data.table making in-place changes to the object.
-    input <- data.table::copy( table )
+    # # make a copy of the input object. This is inefficient in terms of memory,
+    # # but will prevent data.table making in-place changes to the object.
+    # input <- data.table::copy( table )
 
     # find the column names
     column.names <- names( input )
@@ -195,7 +195,8 @@ write_rcsv <- function( table,
                                            sep = "},{" )
         } else {
             for( col in times.cols ) {
-                input[ , ( col ) := as.character( .SD[[col]] ) ]
+                # convert to ITime so that fwrite writes it out properly
+                input[ , ( col ) := as.ITime( .SD[[col]] ) ]
             }
             header[ times.cols ] <- paste( header[ times.cols ],
                                            "from:string",
@@ -215,7 +216,7 @@ write_rcsv <- function( table,
                                            sep = "},{" )
         } else {
             for( col in ITime.cols ) {
-                input[ , ( col ) := as.character( .SD[[col]] ) ]
+                # input[ , ( col ) := as.character( .SD[[col]] ) ]
             }
             header[ ITime.cols ] <- paste( header[ ITime.cols ],
                                            "from:string",
@@ -234,7 +235,7 @@ write_rcsv <- function( table,
                                           sep = "},{" )
         } else {
             for( col in date.cols ) {
-                input[ , ( col ) := as.character( .SD[[col]] ) ]
+                # input[ , ( col ) := as.character( .SD[[col]] ) ]
             }
             header[ date.cols ] <- paste( header[ date.cols ],
                                           "from:string",
@@ -304,7 +305,8 @@ write_rcsv <- function( table,
                         sep = ",", sep2 = c( "", "|", "" ),
                         dateTimeAs = "write.csv",
                         logicalAsInt = logical.as.int,
-                        col.names = TRUE
+                        col.names = TRUE,
+                        showProgress = TRUE
     )
 
     if( !is.null( notes ) ) {

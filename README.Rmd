@@ -51,8 +51,9 @@ testDF <- function( n ) {
         posix = seq.POSIXt( as.POSIXct( "2000-01-01 10:00:00", tz = "EST" ), by = 1000, length.out = n ),
         itime = setattr( sample( seq_len( 86399 ), n, replace = TRUE ), "class", "ITime" ),
         logical = sample( c( TRUE, FALSE ), n, replace = T ),
-        factor = factor( sample( c( "new", "old", "other", "really" ), n, replace = TRUE ),
-                         levels = c( "old", "really", "new", "other" )  ),
+        factor = factor( sample( c( "small", "medium", "large", "extra-large" ), n, replace = TRUE ),
+                         levels = c( "small", "medium", "large", "extra-large" )  ),
+        times = chron::times( seq.int( from = 0.001, to = 0.999, length.out = n ) ),
         stringsAsFactors = FALSE
     )
 }
@@ -88,7 +89,7 @@ df.base <- read.csv( testfile, comment.char = "#" )
 glimpse( df.base, width = 80 )
 ```
 
-Using a regular reader however, will not necessarily import the columns correctly. Even with the very good `readr` package, which does a great job, we won't always correctly attribute the original column classes, because there is ambiguity on the user's original intent.
+Using a regular reader however, will not necessarily import the columns correctly (note several incorrect import formats above). Even with the very good `readr` package, which does a great job, we won't always correctly attribute the original column classes, because there is ambiguity on the user's original intent.
 ```{r, message=FALSE}
 df.readr <- readr::read_csv( testfile, comment = "#" )
 glimpse( df.readr, width = 80 )
@@ -111,6 +112,9 @@ cat( "using readr::read_csv:\t\t", as.character( levels( df.readr$factor ) ), "\
 cat( "using base::read.csv:\t\t", as.character( levels( df.base$factor ) ) )
 ```
 
+`readr` defaults all columns without other conversion triggers to `character` class (hence there are no levels to display here).
+`read.csv` defaults these columns to `factor` class, but automatically sorts levels in alphabetical order, which may not be appropriate, as is the case here.
+`rcsv` determines whether or not to convert a column to factor based on the data frame from which it was written, and stores then extracts the correct factor levels order.
 
 #### using write_rcsv with data conversion options
 
@@ -121,7 +125,7 @@ rcsv::write_rcsv( df, testfile, strings.convert = TRUE )
 readLines( testfile, n = 12 )
 ```
 
-The data itself here looks significantly different from the regular csv. character strings, factors, dates, times, and logical objects are all being represented as integers, to be converted back to their respective classes on import using the information stored in the header, without any extra parameters needing to be passed to the import call:
+The data itself here looks significantly different from the regular csv. character strings, factors, dates, times, and logical objects are all being represented in integer or numeric form, to be converted back to their respective classes on import using the information stored in the header, without any extra parameters needing to be passed to the import call:
 ```{r}
 df.readrcsv.convert <- read_rcsv( testfile )
 glimpse( df.readrcsv.convert )
@@ -144,18 +148,25 @@ write.times <- microbenchmark::microbenchmark(
     base.write = write.csv( df, "READMEfiles/base_write.csv" ),
     readr.write = readr::write_csv( df, "READMEfiles/readr_write.csv" ),
     dt.fwrite = data.table::fwrite( df, "READMEfiles/dt_fwrite.csv", dateTimeAs = "write.csv" ),
-    rcsv.noconvert = rcsv::write_rcsv( df, "READMEfiles/rcsv_convert_FALSE.rcsv", strings.convert = FALSE ),
-    rcsv.convert = rcsv::write_rcsv( df, "READMEfiles/rcsv_convert_TRUE.rcsv", strings.convert = TRUE ),
-times = 30, control = list( warmup = 10 ) )
-ggplot( write.times, aes( expr, time/1E9, colour = expr ) ) +
+    rcsv.noconvert = rcsv::write_rcsv( df, "READMEfiles/rcsv_noconvert.rcsv" ),
+    rcsv.convert = rcsv::write_rcsv( df, "READMEfiles/rcsv_convert.rcsv", strings.convert = TRUE ),
+    times = 8
+)
+write.times
+```
+
+`write_rcsv` is built around the fantastic `data.table::fwrite` function, making it much faster than both `base::write.csv` and `readr::write_csv`. It even maintains good performance compared with `data.table::fwrite`, and in fact outperforms `fwrite` significantly when string conversions are turned on.
+```{r}
+ggplot( setDT( write.times )[ grepl( "dt|rcsv", expr ), ], aes( expr, time/1E9, colour = expr ) ) +
     geom_violin( show.legend = FALSE ) +
     geom_jitter( size = 1, alpha = 0.4, width = 0.25, show.legend = FALSE ) +
     ylab( "write time (s)" ) + xlab( "" ) +
+    ylim( c( 0, NA ) ) +
     labs( title = "File write times.",
           subtitle = sprintf( "%s row by %s column data frame.", n, ncol( df ) ) )
 ```
 
-`write_rcsv` is built around `data.table::fwrite`, so the speed differences between `dt.fwrite`, `rcsv.noconvert`, and `rcsv.convert` seen here are the result of additional processing in the `write_rcsv` function (slowing it down), and the advantage of writing fewer characters to file (speeding it up where `strings.convert` == TRUE). Without string conversions, for data frames of a reasonable size, `rcsv` generally writes with comparable speed to `readr` and `base`, while turning the string conversions on can make it even faster than `fwrite` (which was a big surprise to me!).
+Any speed differences between `dt.fwrite`, `rcsv.noconvert`, and `rcsv.convert` seen here are the result of additional processing in the `write_rcsv` function (slowing it down), and the advantage of writing fewer characters to file (speeding it up where `strings.convert` == TRUE). Without string conversions, `rcsv` generally writes with comparable speed to `fwrite`, while turning the string conversions on can make it significantly faster.
 
 
 ## File sizes
@@ -185,9 +196,10 @@ read.times <- microbenchmark::microbenchmark(
     base.read = { df.base <- read.csv( "READMEfiles/base_write.csv" ) },
     readr.read = { df.readr <- readr::read_csv( "READMEfiles/readr_write.csv" ) },
     dt.fread = { df.fread <- data.table::fread( "READMEfiles/dt_fwrite.csv" ) },
-    noconvert = { df.noconvert <- rcsv::read_rcsv( "READMEfiles/rcsv_convert_FALSE.rcsv" ) },
-    convert = { df.convert <- rcsv::read_rcsv( "READMEfiles/rcsv_convert_TRUE.rcsv" ) },
-times = 30, control = list( warmup = 10 ) )
+    noconvert = { df.noconvert <- rcsv::read_rcsv( "READMEfiles/rcsv_noconvert.rcsv" ) },
+    convert = { df.convert <- rcsv::read_rcsv( "READMEfiles/rcsv_convert.rcsv" ) },
+    times = 8
+)
 
 ggplot( read.times, aes( expr, time/1E9, colour = expr ) ) +
     geom_violin( show.legend = FALSE ) +
@@ -233,7 +245,7 @@ notes_add( df, "here's the first note for this dataset" )
 
 This note can be replaced, by using `notes_replace`, or we can add another note with `notes_add`
 ```{r}
-notes_add( df, "this is my second note. There might be more." )
+notes_add( df, "this is my second note. I might add more later." )
 ```
 
 Each time a note is added, the full set of notes are printed to the console. This console print will also happen whenever the data is written to file...

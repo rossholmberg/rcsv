@@ -101,7 +101,8 @@ read_rcsv <- function( file, subset = NULL ) {
                                  sep = ",", sep2 = c( "", "|", "" ),
                                  colClasses = column.classes.readin,
                                  nrows = nrows,
-                                 header = FALSE
+                                 header = FALSE,
+                                 showProgress = TRUE
     )
 
     if( !is.null( subset ) ) {
@@ -196,7 +197,7 @@ read_rcsv <- function( file, subset = NULL ) {
         } else if( col.class == "ITime" ) {
 
             if( convert.from == "string" ) {
-                output[ , ( col ) := as.ITime( .SD[[col]] ) ]
+                output[ , ( col ) := as.ITime( chron::times( .SD[[col]] ) ) ]
             } else if( convert.from == "integer" ) {
                 output[ , ( col ) := setattr( as.integer( .SD[[col]] ),
                                               "class",
