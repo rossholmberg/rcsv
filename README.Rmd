@@ -232,7 +232,9 @@ ggplot( data = read.times, #setDT( read.times )[ grepl( "^rcsv|^dt|^rds|^fst|^fe
 We can see here that when reading in data, the speed of `rcsv` is good if conversions are used, but slowed significantly without conversions (even slower than `base::read.csv`). Note the time spent here is on applying conversions to the data on import. These conversions would usually need to be performed manually after import, meaning that a more appropriate comparison between both forms of `read_rcsv` and other read methods may be to include those conversion steps
 ```{r}
 read.times.with.manipulations <- microbenchmark::microbenchmark(
-    base_read = { df.base <- read.csv( "READMEfiles/base_write.csv" ) },
+    base_read = {
+        df.base <- read.csv( "READMEfiles/base_write.csv" )
+    },
     readr_read = {
         df.readr <- readr::read_csv( "READMEfiles/readr_write.csv",
                                      col_types = cols(
@@ -247,7 +249,7 @@ read.times.with.manipulations <- microbenchmark::microbenchmark(
                                          ),
                                          col_time()
                                      ) ) %>%
-            mutate( posix = as.POSIXct( posix, tz = "EST" ) )
+            mutate( posix = as.POSIXct( posix, origin = "1970-01-01 00:00:00", tz = "EST" ) )
         },
     dt_fread_manip = { 
         df.fread.manip <- data.table::fread( "READMEfiles/dt_fwrite.csv" )
