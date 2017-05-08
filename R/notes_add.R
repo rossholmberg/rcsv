@@ -15,6 +15,6 @@ notes_add <- function( x, notes ) {
     current <- attr( x, "notes" )
     setattr( x, "notes", c( current, notes ) )
 
-    cat( "Note: ", paste( c( current, notes ), collapse = "\n\t" ) )
+    cat( "Note:  ", paste( c( current, notes ), collapse = "\n\t" ) )
 
 }

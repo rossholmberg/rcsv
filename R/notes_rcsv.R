@@ -29,7 +29,7 @@ notes_rcsv <- function( file ) {
 
     notes <- gsub( ".*notes:|}.*", "", notes )
 
-    cat( "Note: ", paste( notes, collapse = "\n\t" ) )
+    cat( "Note:  ", paste( notes, collapse = "\n\t" ) )
 
     return( invisible( notes ) )
 
