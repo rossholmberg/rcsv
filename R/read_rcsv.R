@@ -8,6 +8,7 @@
 #' @param subset integer vector of rows to read
 #' @import data.table
 #' @importFrom chron times
+#' @importFrom fasttime fastPOSIXct
 #'
 #' @export
 
@@ -120,7 +121,7 @@ read_rcsv <- function( file, subset = NULL ) {
                 output[ , ( col ) := as.Date( as.integer( .SD[[col]] ),
                                               origin = "1970-01-01" ) ]
             } else if( convert.from == "string" ) {
-                output[ , ( col ) := as.Date( .SD[[col]], format = "%Y-%m-%d" ) ]
+                output[ , ( col ) := as.Date( fasttime::fastPOSIXct( .SD[[col]], tz = "UTC" ) ) ]
             } else {
                 warning( paste0( "Don't know how to convert Date column `",
                                  column.names[ col ],
@@ -138,12 +139,10 @@ read_rcsv <- function( file, subset = NULL ) {
                                      column.names[ col ],
                                      "`. Beware of possible consequences." )
                     )
-                    output[ , ( col ) := as.POSIXct( .SD[[col]],
-                                                     format = "%Y-%m-%d %H:%M:%S" ) ]
+                    output[ , ( col ) := fasttime::fastPOSIXct( .SD[[col]], tz = "UTC" ) ]
                 } else {
-                    output[ , ( col ) := as.POSIXct( .SD[[col]],
-                                                     format = "%Y-%m-%d %H:%M:%S",
-                                                     tz = tz ) ]
+                    output[ , ( col ) := fasttime::fastPOSIXct( .SD[[col]] ) ]
+                    setattr( output[[col]], "tzone", tz )
                 }
             } else if( convert.from == "integer" ) {
                 if( tz == "none" ) {
@@ -152,7 +151,8 @@ read_rcsv <- function( file, subset = NULL ) {
                                      "`. Beware of possible consequences." )
                     )
                     output[ , ( col ) := as.POSIXct( as.integer( .SD[[col]] ),
-                                                     origin = "1970-01-01 00:00:00" ) ]
+                                                     origin = "1970-01-01 00:00:00",
+                                                     tz = "UTC" ) ]
                 } else {
                     output[ , ( col ) := as.POSIXct( as.integer( .SD[[col]] ),
                                                      origin = "1970-01-01 00:00:00",

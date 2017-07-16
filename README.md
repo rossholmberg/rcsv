@@ -96,7 +96,7 @@ glimpse( df.readrcsv )
 #> $ integers <int> 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16...
 #> $ letters  <chr> "h", "u", "k", "w", "y", "b", "n", "x", "o", "l", "y"...
 #> $ dates    <date> 2000-01-01, 2000-01-02, 2000-01-03, 2000-01-04, 2000...
-#> $ posix    <dttm> 2000-01-01 10:00:00, 2000-01-01 10:16:40, 2000-01-01...
+#> $ posix    <dttm> 2000-01-01 05:00:00, 2000-01-01 05:16:40, 2000-01-01...
 #> $ itime    <S3: ITime> 14:23:59, 07:59:16, 11:43:36, 22:54:26, 11:35:2...
 #> $ logical  <lgl> TRUE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, TRUE, T...
 #> $ factor   <fctr> extra-large, small, extra-large, large, large, mediu...
@@ -142,34 +142,38 @@ glimpse( df.readr, width = 80 )
 Some of these issues will be easily fixed, like converting factors to strings, or vice-versa. Some are less simple though, for example timezones are generally\* not printed to csv files, meaning they are often read into memory with different timezone attributes from the original data frame. This can be difficult to notice if special care is not taken, and can have serious consequences. \*worth noting that `data.table::fwrite` does have a facility for this
 
 ``` r
-cat( "from original data frame:\t", as.character( df$posix[1] ), attr( df$posix[1], "tzone" ), "\n" )
-#> from original data frame:     2000-01-01 10:00:00 EST
-cat( "using read_rcsv:\t\t", as.character( df.readrcsv$posix[1] ), attr( df.readrcsv$posix[1], "tzone" ), "\n" )
-#> using read_rcsv:      2000-01-01 10:00:00 EST
-cat( "using readr::read_csv:\t\t", as.character( df.readr$posix[1] ), attr( df.readr$posix[1], "tzone" ), "\n" )
-#> using readr::read_csv:        2000-01-01 10:00:00 UTC
-cat( "using base::read.csv:\t\t", as.character( df.base$posix[1] ), attr( df.base$posix[1], "tzone" ), "\n" )
-#> using base::read.csv:         2000-01-01 10:00:00
+cat( "Testing for timezone changes:\n",
+     "from original data frame:\t", as.character( df$posix[1] ), attr( df$posix[1], "tzone" ), "\n",
+     "using read_rcsv:\t\t", as.character( df.readrcsv$posix[1] ), attr( df.readrcsv$posix[1], "tzone" ), "\n",
+     "using readr::read_csv:\t\t", as.character( df.readr$posix[1] ), attr( df.readr$posix[1], "tzone" ), "\n",
+     "using base::read.csv:\t\t", as.character( df.base$posix[1] ), attr( df.base$posix[1], "tzone" ), "\n" )
+#> Testing for timezone changes:
+#>  from original data frame:    2000-01-01 10:00:00 EST 
+#>  using read_rcsv:         2000-01-01 05:00:00 EST 
+#>  using readr::read_csv:       2000-01-01 10:00:00 UTC 
+#>  using base::read.csv:        2000-01-01 10:00:00
 ```
 
 `factor` columns also raise an issue here, where they may be correctly read in as factor, but associated incorrect levels, which may have consequences on further data analysis:
 
 ``` r
-cat( "from original data frame:\t", levels( df$factor ), "\n" )
-#> from original data frame:     small medium large extra-large
-cat( "using read_rcsv:\t\t", levels( df.readrcsv$factor ), "\n" )
-#> using read_rcsv:      small medium large extra-large
-cat( "using readr::read_csv:\t\t", as.character( levels( df.readr$factor ) ), "\n" )
-#> using readr::read_csv:       
-cat( "using base::read.csv:\t\t", as.character( levels( df.base$factor ) ) )
-#> using base::read.csv:         extra-large large medium small
+cat( "Testing for factor level changes:\n",
+     "from original data frame:\t", levels( df$factor ), "\n",
+     "using read_rcsv:\t\t", levels( df.readrcsv$factor ), "\n",
+     "using readr::read_csv:\t\t", levels( df.readr$factor ), "\n",
+     "using base::read.csv:\t\t", levels( df.base$factor ) )
+#> Testing for factor level changes:
+#>  from original data frame:    small medium large extra-large 
+#>  using read_rcsv:         small medium large extra-large 
+#>  using readr::read_csv:       
+#>  using base::read.csv:        extra-large large medium small
 ```
 
-`readr` defaults all columns without other conversion triggers to `character` class (hence there are no levels to display here). `read.csv` defaults these columns to `factor` class, but automatically sorts levels in alphabetical order, which may not be appropriate, as is the case here. `rcsv` determines whether or not to convert a column to factor based on the data frame from which it was written, and stores then extracts the correct factor levels order.
+`readr` defaults all columns without other conversion triggers to `character` class (hence there are no levels to display here). `read.csv` defaults these columns to `factor` class, but automatically sorts levels in alphabetical order, which may not be appropriate, as is the case here. `rcsv` determines whether or not to convert a column to factor based on the data frame from which it was written, and stores then extracts the correct factor levels, including their order.
 
 ### using write\_rcsv with data conversion options
 
-The `write_rcsv` function includes several options for "compressing"" the csv output file by changing the way some columns are represented. We can control each conversion type individually with their respective parameters, or we can turn all of these options on with a single parameter, `strings.convert`.
+The `write_rcsv` function includes several options for "compressing" the csv output file by changing the way some columns are represented. We can control each conversion type individually with their respective parameters, or we can turn all of these options on with a single parameter, `strings.convert`.
 
 ``` r
 rcsv::write_rcsv( df, testfile, strings.convert = TRUE )
@@ -210,140 +214,93 @@ File writing.
 
 ### Why use conversions?
 
-By converting columns in this way, we may save disk space, as well as speed up reading and writing, while retaining the original data, and maintaining meaningful diffs. It is certainly less of a "general" data storage method (although the details needed to convert back to the original data types is mostly human-readable in the header, but I digress...) than without these conversions, but it may be useful in some situations.
+By converting columns in this way, we may save disk space\*, as well as speed up reading and writing, while retaining the original data, and maintaining meaningful diffs. It is certainly less of a "general" data storage method (although the details needed to convert back to the original data types is mostly human-readable in the header, but I digress...) than without these conversions, but it may be useful in some situations.
 
 To see the file size and speed advantages, we'll create a more meaningful (bigger) dataset, and write it to files with several different methods.
 
+-   Character columns with highly repeated string fields will benefit greatly, whereas those with completely unique string fields will not. `Date`, `ITime`, and `IDate` formats are all more efficiently stored as integers than character strings, and will generally convert to their proper classes faster from integers than from character strings. `POSIXct` is likewise more efficiently converted from numeric, and this also makes storage of greater precision than 1s simpler and more efficient. Similarly, `times` format values stored as numeric enables greater than 1s precision values to be stored and retrieved, however in some cases may increase storage size (where the decimal values convert to longer strings than the formatted time value).
+
 ### File write speeds
+
+We test the speed of file writing between a few of the methods available to an R user. Note that we include lots of methods in the test runs, but will only plot results from `data.table` and `rcsv`. This is because `base` and `readr` are too much slower, while `fst` and `feather` are too much faster, such that the plot doesn't
 
 ``` r
 n <- 1E6
 df <- testDF( n )
 write.times <- microbenchmark::microbenchmark(
-    base.write = write.csv( df, "READMEfiles/base_write.csv" ),
-    readr.write = readr::write_csv( df, "READMEfiles/readr_write.csv" ),
-    dt.fwrite = data.table::fwrite( df, "READMEfiles/dt_fwrite.csv", dateTimeAs = "write.csv" ),
-    rcsv.noconvert = rcsv::write_rcsv( df, "READMEfiles/rcsv_noconvert.rcsv" ),
-    rcsv.convert = rcsv::write_rcsv( df, "READMEfiles/rcsv_convert.rcsv", strings.convert = TRUE ),
-    rds.default = saveRDS( df, "READMEfiles/rds_default.rds" ),
+    base_write = write.csv( df, "READMEfiles/base_write.csv" ),
+    readr_write = readr::write_csv( df, "READMEfiles/readr_write.csv" ),
+    dt_fwrite = data.table::fwrite( df, "READMEfiles/dt_fwrite.csv" ),
+    rcsv_noconvert = rcsv::write_rcsv( df, "READMEfiles/rcsv_noconvert.rcsv" ),
+    rcsv_convert = rcsv::write_rcsv( df, "READMEfiles/rcsv_convert.rcsv", strings.convert = TRUE ),
+    rds_default = saveRDS( df, "READMEfiles/rds_default.rds" ),
+    fst = fst::write.fst( df, "READMEfiles/fst.fst" ),
+    feather = feather::write_feather( df, "READMEfiles/feather.feather" ),
     times = 12
 )
 #> 
-Written 14.6% of 1000000 rows in 6 secs using 4 threads. anyBufferGrown=no; maxBuffUsed=46%. Finished in 35 secs.      
+Written 43.6% of 1000000 rows in 5 secs using 8 threads. anyBufferGrown=no; maxBuffUsed=46%. Finished in 6 secs.      
                                                                                                                                      
 
-Written 16.3% of 1000000 rows in 5 secs using 4 threads. anyBufferGrown=no; maxBuffUsed=46%. Finished in 25 secs.      
-Written 38.1% of 1000000 rows in 6 secs using 4 threads. anyBufferGrown=no; maxBuffUsed=46%. Finished in 9 secs.      
-Written 81.7% of 1000000 rows in 7 secs using 4 threads. anyBufferGrown=no; maxBuffUsed=46%. Finished in 1 secs.      
+Written 38.1% of 1000000 rows in 2 secs using 8 threads. anyBufferGrown=no; maxBuffUsed=46%. Finished in 3 secs.      
                                                                                                                                      
 
-Written 4.9% of 1000000 rows in 5 secs using 4 threads. anyBufferGrown=no; maxBuffUsed=46%. Finished in 97 secs.      
-Written 43.9% of 1000000 rows in 6 secs using 4 threads. anyBufferGrown=no; maxBuffUsed=46%. Finished in 7 secs.      
-Written 63.4% of 1000000 rows in 7 secs using 4 threads. anyBufferGrown=no; maxBuffUsed=46%. Finished in 4 secs.      
+Written 27.2% of 1000000 rows in 3 secs using 8 threads. anyBufferGrown=no; maxBuffUsed=46%. Finished in 8 secs.      
                                                                                                                                      
 
-Written 9.8% of 1000000 rows in 5 secs using 4 threads. anyBufferGrown=no; maxBuffUsed=46%. Finished in 46 secs.      
+Written 5.4% of 1000000 rows in 2 secs using 8 threads. anyBufferGrown=no; maxBuffUsed=45%. Finished in 34 secs.      
                                                                                                                                      
 
-Written 14.6% of 1000000 rows in 5 secs using 4 threads. anyBufferGrown=no; maxBuffUsed=46%. Finished in 29 secs.      
+Written 32.7% of 1000000 rows in 2 secs using 8 threads. anyBufferGrown=no; maxBuffUsed=46%. Finished in 4 secs.      
                                                                                                                                      
 
-Written 4.9% of 1000000 rows in 4 secs using 4 threads. anyBufferGrown=no; maxBuffUsed=46%. Finished in 78 secs.      
+Written 32.7% of 1000000 rows in 2 secs using 8 threads. anyBufferGrown=no; maxBuffUsed=46%. Finished in 4 secs.      
                                                                                                                                      
 
-Written 4.9% of 1000000 rows in 4 secs using 4 threads. anyBufferGrown=no; maxBuffUsed=46%. Finished in 78 secs.      
-Written 43.9% of 1000000 rows in 5 secs using 4 threads. anyBufferGrown=no; maxBuffUsed=46%. Finished in 6 secs.      
+Written 5.4% of 1000000 rows in 2 secs using 8 threads. anyBufferGrown=no; maxBuffUsed=45%. Finished in 34 secs.      
                                                                                                                                      
 
-Written 9.8% of 1000000 rows in 5 secs using 4 threads. anyBufferGrown=no; maxBuffUsed=46%. Finished in 46 secs.      
+Written 21.8% of 1000000 rows in 2 secs using 8 threads. anyBufferGrown=no; maxBuffUsed=46%. Finished in 7 secs.      
                                                                                                                                      
 
-Written 4.9% of 1000000 rows in 3 secs using 4 threads. anyBufferGrown=no; maxBuffUsed=46%. Finished in 58 secs.      
+Written 10.9% of 1000000 rows in 2 secs using 8 threads. anyBufferGrown=no; maxBuffUsed=45%. Finished in 16 secs.      
                                                                                                                                      
 
-Written 5.4% of 1000000 rows in 4 secs using 4 threads. anyBufferGrown=no; maxBuffUsed=45%. Finished in 69 secs.      
+Written 5.4% of 1000000 rows in 2 secs using 8 threads. anyBufferGrown=no; maxBuffUsed=45%. Finished in 34 secs.      
                                                                                                                                      
 
-Written 16.3% of 1000000 rows in 4 secs using 4 threads. anyBufferGrown=no; maxBuffUsed=46%. Finished in 20 secs.      
-Written 59.9% of 1000000 rows in 6 secs using 4 threads. anyBufferGrown=no; maxBuffUsed=46%. Finished in 4 secs.      
-Written 81.7% of 1000000 rows in 8 secs using 4 threads. anyBufferGrown=no; maxBuffUsed=46%. Finished in 1 secs.      
+Written 16.3% of 1000000 rows in 2 secs using 8 threads. anyBufferGrown=no; maxBuffUsed=46%. Finished in 10 secs.      
                                                                                                                                      
 
-Written 5.4% of 1000000 rows in 4 secs using 4 threads. anyBufferGrown=no; maxBuffUsed=45%. Finished in 69 secs.      
-Written 27.2% of 1000000 rows in 5 secs using 4 threads. anyBufferGrown=no; maxBuffUsed=46%. Finished in 13 secs.      
-Written 49.0% of 1000000 rows in 6 secs using 4 threads. anyBufferGrown=no; maxBuffUsed=46%. Finished in 6 secs.      
-Written 70.8% of 1000000 rows in 7 secs using 4 threads. anyBufferGrown=no; maxBuffUsed=46%. Finished in 2 secs.      
-                                                                                                                                     
-
-Written 14.6% of 1000000 rows in 5 secs using 4 threads. anyBufferGrown=no; maxBuffUsed=46%. Finished in 29 secs.      
-                                                                                                                                     
-
-Written 5.4% of 1000000 rows in 4 secs using 4 threads. anyBufferGrown=no; maxBuffUsed=45%. Finished in 69 secs.      
-Written 27.2% of 1000000 rows in 5 secs using 4 threads. anyBufferGrown=no; maxBuffUsed=46%. Finished in 13 secs.      
-Written 49.0% of 1000000 rows in 6 secs using 4 threads. anyBufferGrown=no; maxBuffUsed=46%. Finished in 6 secs.      
-                                                                                                                                     
-
-Written 5.4% of 1000000 rows in 4 secs using 4 threads. anyBufferGrown=no; maxBuffUsed=45%. Finished in 69 secs.      
-Written 70.8% of 1000000 rows in 7 secs using 4 threads. anyBufferGrown=no; maxBuffUsed=46%. Finished in 2 secs.      
-                                                                                                                                     
-
-Written 5.4% of 1000000 rows in 4 secs using 4 threads. anyBufferGrown=no; maxBuffUsed=45%. Finished in 69 secs.      
-Written 27.2% of 1000000 rows in 5 secs using 4 threads. anyBufferGrown=no; maxBuffUsed=46%. Finished in 13 secs.      
-Written 49.0% of 1000000 rows in 6 secs using 4 threads. anyBufferGrown=no; maxBuffUsed=46%. Finished in 6 secs.      
-Written 70.8% of 1000000 rows in 7 secs using 4 threads. anyBufferGrown=no; maxBuffUsed=46%. Finished in 2 secs.      
-                                                                                                                                     
-
-Written 16.3% of 1000000 rows in 5 secs using 4 threads. anyBufferGrown=no; maxBuffUsed=46%. Finished in 25 secs.      
-                                                                                                                                     
-
-Written 21.8% of 1000000 rows in 4 secs using 4 threads. anyBufferGrown=no; maxBuffUsed=46%. Finished in 14 secs.      
-Written 43.6% of 1000000 rows in 5 secs using 4 threads. anyBufferGrown=no; maxBuffUsed=46%. Finished in 6 secs.      
-                                                                                                                                     
-
-Written 5.4% of 1000000 rows in 4 secs using 4 threads. anyBufferGrown=no; maxBuffUsed=45%. Finished in 69 secs.      
-                                                                                                                                     
-
-Written 9.8% of 1000000 rows in 4 secs using 4 threads. anyBufferGrown=no; maxBuffUsed=46%. Finished in 37 secs.      
-Written 29.3% of 1000000 rows in 7 secs using 4 threads. anyBufferGrown=no; maxBuffUsed=46%. Finished in 16 secs.      
-Written 48.8% of 1000000 rows in 9 secs using 4 threads. anyBufferGrown=no; maxBuffUsed=46%. Finished in 9 secs.      
-Written 68.3% of 1000000 rows in 10 secs using 4 threads. anyBufferGrown=no; maxBuffUsed=46%. Finished in 4 secs.      
-                                                                                                                                     
-
-Written 16.3% of 1000000 rows in 4 secs using 4 threads. anyBufferGrown=no; maxBuffUsed=46%. Finished in 20 secs.      
-                                                                                                                                     
-
-Written 9.8% of 1000000 rows in 4 secs using 4 threads. anyBufferGrown=no; maxBuffUsed=46%. Finished in 37 secs.      
-Written 29.3% of 1000000 rows in 5 secs using 4 threads. anyBufferGrown=no; maxBuffUsed=46%. Finished in 12 secs.      
-                                                                                                                                     
-
-Written 10.9% of 1000000 rows in 4 secs using 4 threads. anyBufferGrown=no; maxBuffUsed=45%. Finished in 32 secs.      
-                                                                                                                                     
-
-Written 14.6% of 1000000 rows in 4 secs using 4 threads. anyBufferGrown=no; maxBuffUsed=46%. Finished in 23 secs.      
-Written 92.7% of 1000000 rows in 5 secs using 4 threads. anyBufferGrown=no; maxBuffUsed=46%. Finished in 0 secs.      
+Written 38.1% of 1000000 rows in 2 secs using 8 threads. anyBufferGrown=no; maxBuffUsed=46%. Finished in 3 secs.      
                                                                                                                                      
 write.times
 #> Unit: milliseconds
-#>            expr        min         lq       mean    median         uq
-#>      base.write 27931.2134 29288.8828 30081.4146 29696.637 30910.9796
-#>     readr.write 26808.2779 27828.7755 28425.3169 28263.672 28741.3208
-#>       dt.fwrite  3620.5347  4645.3499  5594.5316  4908.487  6704.2295
-#>  rcsv.noconvert  3905.2429  4556.8892  6004.4301  5805.835  7421.9943
-#>    rcsv.convert   257.7885   305.2116   604.0405   492.096   594.5675
-#>     rds.default  4253.2032  4405.0875  4653.3628  4491.572  4709.6139
-#>        max neval
-#>  33241.780    12
-#>  31142.818    12
-#>   9389.282    12
-#>   8432.889    12
-#>   1558.656    12
-#>   6156.028    12
+#>            expr         min          lq       mean      median         uq
+#>      base_write 16438.05911 16822.33967 17408.7482 17506.74187 17981.8812
+#>     readr_write 15115.65891 15271.42986 15561.7886 15572.96949 15888.2406
+#>       dt_fwrite    73.22938    88.50422   370.1842   300.63675   560.0786
+#>  rcsv_noconvert  2054.16972  2269.22320  2617.6383  2309.97661  2673.2302
+#>    rcsv_convert    93.15866   104.54060   176.6040   126.56123   221.0548
+#>     rds_default  3056.46976  3071.43346  3089.0495  3078.99488  3104.6503
+#>             fst    32.55602    33.83868   150.8507    35.11388   177.4708
+#>         feather    44.49982    45.03265   262.5553    74.47985   462.7075
+#>         max neval
+#>  18157.5345    12
+#>  15952.4157    12
+#>    967.5374    12
+#>   4973.3361    12
+#>    465.9984    12
+#>   3134.7373    12
+#>    897.9506    12
+#>    874.9755    12
 ```
 
-`write_rcsv` is built around the fantastic `data.table::fwrite` function, making it much faster than both `base::write.csv` and `readr::write_csv`. It even maintains good performance compared with `data.table::fwrite`, and in fact outperforms `fwrite` significantly when string conversions are turned on.
+`write_rcsv` is built around the fantastic `data.table::fwrite` function, making it much faster than both `base::write.csv` and `readr::write_csv`. It even maintains relatively good performance compared with `data.table::fwrite`, but is slowed a little by the conversion processes and header writing steps.
 
 ``` r
-ggplot( setDT( write.times )[ grepl( "dt|rcsv|rds", expr ), ], aes( expr, time/1E9, colour = expr ) ) +
+ggplot( write.times,
+        mapping = aes( expr, time/1E9, colour = expr ) ) +
     geom_violin( show.legend = FALSE ) +
     geom_jitter( size = 1, alpha = 0.4, width = 0.25, show.legend = FALSE ) +
     ylab( "write time (s)" ) + xlab( "" ) +
@@ -354,12 +311,13 @@ ggplot( setDT( write.times )[ grepl( "dt|rcsv|rds", expr ), ], aes( expr, time/1
 
 ![](READMEfigs/unnamed-chunk-14-1.png)
 
-Any speed differences between `dt.fwrite`, `rcsv.noconvert`, and `rcsv.convert` seen here are the result of additional processing in the `write_rcsv` function (slowing it down), and the advantage of writing fewer characters to file (speeding it up where `strings.convert` == TRUE). Without string conversions, `rcsv` generally writes with comparable speed to `fwrite`, while turning the string conversions on can make it significantly faster.
+The speed differences between `dt.fwrite`, `rcsv.noconvert`, and `rcsv.convert` seen here are the result of additional processing in the `write_rcsv` function (slowing it down), and the advantage of writing fewer characters to file (speeding it up where `strings.convert` == TRUE). Without string conversions, `rcsv` generally writes with comparable speed to `saveRDS`, while turning the string conversions on can make it significantly faster.
 
 ### File sizes
 
 ``` r
-files <- list.files( path = "READMEfiles/", pattern = "*_", full.names = TRUE )
+files <- list.files( path = "READMEfiles/", full.names = TRUE )
+files <- files[ !grepl( "test.rcsv", files ) ]
 sizes <- file.info( files )$size
 
 ggplot( data = data.frame( files = gsub( ".*\\/|\\..*", "", files ), size = sizes ),
@@ -376,66 +334,146 @@ ggplot( data = data.frame( files = gsub( ".*\\/|\\..*", "", files ), size = size
 
 ![](READMEfigs/unnamed-chunk-15-1.png)
 
-Note most csv writers create files of similar sizes, but the `rcsv` format with string conversions can (in some circumstances) result in significant file size reductions.
+Note most csv writers create files of similar sizes, but the `rcsv` format with string conversions can (in some circumstances) result in significant file size reductions. We do not have the same file size benefit of the compressed (as per default settings) `rds` format, so if file size is of paramount importance, it may be worth sticking with the rds format, or including an extra file compression step to your workflow; that is not the primary concern here though.
 
 ### File read times
 
 ``` r
 read.times <- microbenchmark::microbenchmark(
-    base.read = { df.base <- read.csv( "READMEfiles/base_write.csv" ) },
-    readr.read = { df.readr <- readr::read_csv( "READMEfiles/readr_write.csv" ) },
-    dt.fread = { df.fread <- data.table::fread( "READMEfiles/dt_fwrite.csv" ) },
-    noconvert = { df.noconvert <- rcsv::read_rcsv( "READMEfiles/rcsv_noconvert.rcsv" ) },
-    convert = { df.convert <- rcsv::read_rcsv( "READMEfiles/rcsv_convert.rcsv" ) },
-    rds.default = {df.rds <- saveRDS( df, "READMEfiles/rds_default.rds" ) },
+    base_read = { df.base <- read.csv( "READMEfiles/base_write.csv" ) },
+    readr_read = { df.readr <- readr::read_csv( "READMEfiles/readr_write.csv" ) },
+    dt_fread = { df.fread <- data.table::fread( "READMEfiles/dt_fwrite.csv" ) },
+    rcsv_noconvert = { df.noconvert <- rcsv::read_rcsv( "READMEfiles/rcsv_noconvert.rcsv" ) },
+    rcsv_convert = { df.convert <- rcsv::read_rcsv( "READMEfiles/rcsv_convert.rcsv" ) },
+    rds_default = { df.rds <- readRDS( "READMEfiles/rds_default.rds" ) },
+    fst = { df.fst <- fst::read.fst( "READMEfiles/fst.fst" ) },
+    feather = { df.feather <- feather::read_feather( "READMEfiles/feather.feather" ) },
     times = 12
 )
 read.times
-#> Unit: seconds
-#>         expr       min        lq      mean    median        uq       max
-#>    base.read 12.632002 13.252022 13.823244 13.389146 13.882832 16.217964
-#>   readr.read  1.723834  1.941253  2.679027  2.095216  2.655173  7.633234
-#>     dt.fread  1.035118  1.129213  1.277710  1.259564  1.311969  1.866434
-#>    noconvert 15.699154 16.374296 17.134018 16.544552 17.702807 20.589847
-#>      convert  1.122999  1.214916  1.478901  1.430014  1.472164  2.941542
-#>  rds.default  4.248753  4.406246  4.542639  4.450890  4.562699  5.558229
-#>  neval
-#>     12
-#>     12
-#>     12
-#>     12
-#>     12
-#>     12
+#> Unit: milliseconds
+#>            expr        min         lq       mean     median        uq
+#>       base_read 5862.51248 5892.86764 6082.20394 6084.49005 6193.4126
+#>      readr_read 1167.56787 1187.34109 1272.97911 1277.82166 1300.3623
+#>        dt_fread  637.31915  649.50794  680.74756  684.03657  694.1507
+#>  rcsv_noconvert 2323.62187 2459.83549 2688.32792 2664.28305 2930.6322
+#>    rcsv_convert  696.49800  810.00419  974.36161  887.06527 1195.6705
+#>     rds_default  326.54951  333.05116  370.31596  337.41771  400.9823
+#>             fst   26.60566   27.25072   86.54616   30.36329  136.2420
+#>         feather   28.24911   28.51047  155.60958   36.91170  364.1190
+#>        max neval
+#>  6407.0256    12
+#>  1535.4889    12
+#>   781.4978    12
+#>  3060.8552    12
+#>  1352.6324    12
+#>   491.4893    12
+#>   381.6507    12
+#>   465.8959    12
 ```
 
 ``` r
-ggplot( read.times, aes( expr, time/1E9, colour = expr ) ) +
+ggplot( data = read.times, #setDT( read.times )[ grepl( "^rcsv|^dt|^rds|^fst|^feather", expr ) ], 
+        mapping = aes( expr, time/1E9, colour = expr ) ) +
     geom_violin( show.legend = FALSE ) +
     geom_jitter( size = 1, alpha = 0.4, width = 0.25, show.legend = FALSE ) +
     ylab( "read time (s)" ) + xlab( "" ) +
-    scale_y_log10() +
-    labs( title = "File read times (log10 y scale)",
+    ylim( c( 0, NA ) ) +
+    labs( title = "File read times.",
           subtitle = sprintf( "%s row by %s column data frame.", n, ncol( df ) ) )
 ```
 
 ![](READMEfigs/unnamed-chunk-17-1.png)
 
-We can see here that when reading in data, the speed of `rcsv` is excellent if conversions are used, but slowed significantly without conversions (even slower than `base::read.csv`). Note the time spent here is on applying conversions to the data on import. These conversions would usually need to be performed manually after import, meaning that the slow speed here may not be the whole story, depending on your use case.
+We can see here that when reading in data, the speed of `rcsv` is good if conversions are used, but slowed significantly without conversions (even slower than `base::read.csv`). Note the time spent here is on applying conversions to the data on import. These conversions would usually need to be performed manually after import, meaning that a more appropriate comparison between both forms of `read_rcsv` and other read methods may be to include those conversion steps
+
+``` r
+read.times.with.manipulations <- microbenchmark::microbenchmark(
+    base_read = {
+        df.base <- read.csv( "READMEfiles/base_write.csv" )
+    },
+    readr_read = {
+        df.readr <- readr::read_csv( "READMEfiles/readr_write.csv",
+                                     col_types = cols(
+                                         col_integer(),
+                                         col_character(),
+                                         col_date(),
+                                         col_character(),
+                                         col_time(),
+                                         col_logical(),
+                                         col_factor(
+                                             levels = c( "small", "medium", "large", "extra-large" )
+                                         ),
+                                         col_time()
+                                     ) ) %>%
+            mutate( posix = as.POSIXct( posix, origin = "1970-01-01 00:00:00", tz = "EST" ) )
+        },
+    dt_fread = { 
+        df.fread.manip <- data.table::fread( "READMEfiles/dt_fwrite.csv" )
+        df.fread.manip[ , dates := as.Date( dates ) ]
+        df.fread.manip[ , posix := as.POSIXct( posix, origin = "1970-01-01 00:00:00", tz = "EST" ) ]
+        df.fread.manip[ , itime := as.ITime( itime ) ]
+        df.fread.manip[ , factor := factor( factor, levels = c( "small", "medium", "large", "extra-large" ) ) ]
+        df.fread.manip[ , times := chron::times( times ) ] },
+    rcsv_noconvert = { df.noconvert <- rcsv::read_rcsv( "READMEfiles/rcsv_noconvert.rcsv" ) },
+    rcsv_convert = { df.convert <- rcsv::read_rcsv( "READMEfiles/rcsv_convert.rcsv" ) },
+    rds_default = { df.rds <- readRDS( "READMEfiles/rds_default.rds" ) },
+    fst = { df.fst <- fst::read.fst( "READMEfiles/fst.fst" ) },
+    feather = { df.feather <- feather::read_feather( "READMEfiles/feather.feather" ) },
+    times = 12
+)
+read.times.with.manipulations
+#> Unit: milliseconds
+#>            expr        min         lq       mean     median         uq
+#>       base_read 5870.73964 6023.19463 6196.97127 6185.86476 6331.51853
+#>      readr_read 4691.66823 4766.09059 5279.12474 5433.99795 5684.36228
+#>        dt_fread 5741.65026 5891.73258 6125.45770 6053.93146 6373.14438
+#>  rcsv_noconvert 2235.79692 2731.90316 2918.38104 2831.06168 3120.04830
+#>    rcsv_convert  705.14363  714.94542  828.44038  871.59043  876.77988
+#>     rds_default  330.93764  333.00957  343.54049  333.93755  336.74724
+#>             fst   26.35359   27.17547   57.99249   28.20860   79.69119
+#>         feather   27.64031   28.64696   56.87880   29.63069   32.83938
+#>        max neval
+#>  6669.4661    12
+#>  5953.1999    12
+#>  6619.0039    12
+#>  3670.3827    12
+#>   991.7617    12
+#>   443.9374    12
+#>   186.4455    12
+#>   195.9820    12
+```
+
+``` r
+ggplot( setDT( read.times.with.manipulations )[ grepl( "^base|^readr|^rcsv|^dt", expr ) ],
+        mapping = aes( expr, time/1E9, colour = expr ) ) +
+    geom_violin( show.legend = FALSE ) +
+    geom_jitter( size = 1, alpha = 0.4, width = 0.25, show.legend = FALSE ) +
+    ylab( "read time (s)" ) + xlab( "" ) +
+    ylim( c( 0, NA ) ) +
+    labs( title = "File read times, with column manipulations where necessary.",
+          subtitle = sprintf( "%s row by %s column data frame.", n, ncol( df ) ) )
+```
+
+![](READMEfigs/unnamed-chunk-19-1.png)
+
+So, assuming you'll be performing the necessary data conversions on import, `fread` is actually significantly slower than `rcsv`. In the case of `rcsv_convert`, this is due to the fact that converting from numeric variables is often faster than from character. In the case of `rcsv_noconvert`, it is largely due to the use of the `fasttime` package in converting Date and POSIXct variables, which offers significant speed improvements over `as.Date` and `as.POSIXct` functions.
 
 Data integrity
 --------------
 
 ### Testing that the data has been read in correctly.
 
-Test for correct data read. We look at each column of each imported data frame, and compare it to the matching column in the original data frame. In this way, we see if the data has remained consistent through the write/read process.
+To test for correct data read, ee look at each column of each imported data frame, and compare it to the matching column in the original data frame. In this way, we see if the data has remained consistent through the write/read process.
 
 Note: We use `all.equal` here, since `identical` seems too fussy in this case. I'm not sure why, but there often seems to be some invisible characteristics of some columns which cause `identical` to return FALSE, even though everything seems to be the same.
 
 ``` r
 tests <- lapply( X = list( df.convert = df.convert,
                            df.noconvert = df.noconvert,
-                           df.fread = df.fread,
-                           df.base = df.base,
+                           # df.fread = df.fread,
+                           df.fread.manip = df.fread.manip,
+                           df.base = df.base[-1],
                            df.readr = df.readr ),
                  FUN = function(x) {
                      sapply( seq_along( df ),
@@ -449,19 +487,21 @@ print( tests )
 #> [1] "TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE"
 #> 
 #> $df.noconvert
-#> [1] "TRUE TRUE TRUE TRUE TRUE TRUE TRUE Mean relative difference: 5.787064e-06"
+#> [1] "TRUE TRUE 'is.NA' value mismatch: 926951 in current 0 in target Mean absolute difference: 18000 TRUE TRUE TRUE Mean relative difference: 5.787064e-06"
 #> 
-#> $df.fread
-#> [1] "TRUE TRUE c(\"Modes: numeric, character\", \"Attributes: < Modes: list, NULL >\", \"Attributes: < Lengths: 1, 0 >\", \"Attributes: < names for target but not for current >\", \"Attributes: < current is not list-like >\", \"target is Date, current is character\") Mean absolute difference: 98829.26 c(\"Modes: numeric, character\", \"Attributes: < Modes: list, NULL >\", \"Attributes: < Lengths: 1, 0 >\", \"Attributes: < names for target but not for current >\", \"Attributes: < current is not list-like >\", \"target is ITime, current is character\") TRUE 'current' is not a factor c(\"Attributes: < Modes: list, NULL >\", \"Attributes: < Lengths: 2, 0 >\", \"Attributes: < names for target but not for current >\", \"Attributes: < current is not list-like >\", \"target is times, current is numeric\")"
+#> $df.fread.manip
+#> [1] "TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE"
 #> 
 #> $df.base
-#> [1] "TRUE c(\"Modes: character, numeric\", \"target is character, current is numeric\") c(\"Attributes: < Length mismatch: comparison on first 1 components >\", \"Attributes: < Component \\\"class\\\": 1 string mismatch >\", \"target is Date, current is factor\") Mean absolute difference: 42699865505 c(\"Attributes: < Length mismatch: comparison on first 1 components >\", \"Attributes: < Component \\\"class\\\": 1 string mismatch >\", \"target is ITime, current is factor\") c(\"Modes: logical, numeric\", \"Attributes: < target is NULL, current is list >\", \"target is logical, current is factor\") 'current' is not a factor c(\"Attributes: < Names: 1 string mismatch >\", \"Attributes: < Component \\\"class\\\": 1 string mismatch >\", \"Attributes: < Component 2: Lengths (1, 4) differ (string compare on first 1) >\", \"Attributes: < Component 2: 1 string mismatch >\", \"target is times, current is factor\")"
+#> [1] "TRUE c(\"Modes: character, numeric\", \"Attributes: < target is NULL, current is list >\", \"target is character, current is factor\") c(\"Attributes: < Length mismatch: comparison on first 1 components >\", \"Attributes: < Component \\\"class\\\": 1 string mismatch >\", \"target is Date, current is factor\") Mean absolute difference: 55729.38 c(\"Attributes: < Length mismatch: comparison on first 1 components >\", \"Attributes: < Component \\\"class\\\": 1 string mismatch >\", \"target is ITime, current is factor\") TRUE Attributes: < Component \"levels\": 4 string mismatches > c(\"Attributes: < Names: 1 string mismatch >\", \"Attributes: < Component \\\"class\\\": 1 string mismatch >\", \"Attributes: < Component 2: Lengths (1, 86229) differ (string compare on first 1) >\", \"Attributes: < Component 2: 1 string mismatch >\", \"target is times, current is factor\")"
 #> 
 #> $df.readr
-#> [1] "TRUE TRUE TRUE TRUE c(\"Attributes: < Length mismatch: comparison on first 1 components >\", \"Attributes: < Component \\\"class\\\": Lengths (1, 2) differ (string compare on first 1) >\", \"Attributes: < Component \\\"class\\\": 1 string mismatch >\", \"target is ITime, current is hms\") TRUE 'current' is not a factor c(\"Attributes: < Names: 1 string mismatch >\", \"Attributes: < Component \\\"class\\\": Lengths (1, 2) differ (string compare on first 1) >\", \"Attributes: < Component \\\"class\\\": 1 string mismatch >\", \"Attributes: < Component 2: 1 string mismatch >\", \"target is times, current is hms\")"
+#> [1] "TRUE TRUE TRUE Mean absolute difference: 28958.76 c(\"Attributes: < Length mismatch: comparison on first 1 components >\", \"Attributes: < Component \\\"class\\\": Lengths (1, 2) differ (string compare on first 1) >\", \"Attributes: < Component \\\"class\\\": 1 string mismatch >\", \"target is ITime, current is hms\") TRUE TRUE c(\"Attributes: < Names: 1 string mismatch >\", \"Attributes: < Component \\\"class\\\": Lengths (1, 2) differ (string compare on first 1) >\", \"Attributes: < Component \\\"class\\\": 1 string mismatch >\", \"Attributes: < Component 2: 1 string mismatch >\", \"target is times, current is hms\")"
 ```
 
-It's clear here that imports using regular csv readers will need some work to bring the data back to the way it should be. This manipulation needs to be repeated every time a dataset is read into memory, which can be quite prohibitive to a smooth workflow. With `rcsv`, the data is read back into R in the same form as before it was written out, with no additional time or effort on the part of the user.
+It's clear here that imports using regular csv readers will need some work to bring the data back to the way it should be. This manipulation needs to be repeated every time a dataset is read into memory, which can be quite prohibitive to a smooth workflow. With `rcsv`, the data is read back into R in the same form as before it was written out\*, with no additional time or effort on the part of the user.
+
+-   the one exception here is where `times` values have been stored without numeric conversion. The slight discrepancy in the values retrieved is due to the conversion of greater than 1s precision time values to formatted strings ("h:m:s"), which does not allow for the storage of such high precision. Turning conversion on in the `write_rcsv` call solves this by storing as numeric, and therefore retaining the precision of the original data.
 
 Additional features
 -------------------
@@ -472,41 +512,41 @@ Sometimes it's important to include a few brief notes with your dataset. Maybe t
 
 ``` r
 df <- testDF( 100 )
-notes_add( df, "here's the first note for this dataset" )
-#> Note:  here's the first note for this dataset
+notes_add( df, "All the data here was collected with a model X super-duper measuring device" )
+#> Note:   All the data here was collected with a model X super-duper measuring device
 ```
 
 This note can be replaced, by using `notes_replace`, or we can add another note with `notes_add`
 
 ``` r
-notes_add( df, "this is my second note. I might add more later." )
-#> Note:  here's the first note for this dataset
-#>  this is my second note. I might add more later.
+notes_add( df, "The equipment was calibrated using ISO 9000" )
+#> Note:   All the data here was collected with a model X super-duper measuring device
+#>  The equipment was calibrated using ISO 9000
 ```
 
 Each time a note is added, the full set of notes are printed to the console. This console print will also happen whenever the data is written to file...
 
 ``` r
 write_rcsv( df, testfile )
-#> Notes:  here's the first note for this dataset
-#>  this is my second note. I might add more later.
+#> Notes:  All the data here was collected with a model X super-duper measuring device
+#>  The equipment was calibrated using ISO 9000
 ```
 
 And whenever it is read from file.
 
 ``` r
 df <- read_rcsv( testfile )
-#> Notes:  here's the first note for this dataset
-#>  this is my second note. I might add more later.
+#> Notes:  All the data here was collected with a model X super-duper measuring device
+#>  The equipment was calibrated using ISO 9000
 ```
 
 These notes are stored in the file header in a human-readable way, meaning that they can be accessed even without the `rcsv` package.
 
 ``` r
 readLines( testfile, 3 )
-#> [1] "#{rcsvHeader},{headlines:11},{noteslines:2},{colreflines:8},{tablerows:100}"
-#> [2] "#{notes:here's the first note for this dataset}"                            
-#> [3] "#{notes:this is my second note. I might add more later.}"
+#> [1] "#{rcsvHeader},{headlines:11},{noteslines:2},{colreflines:8},{tablerows:100}"         
+#> [2] "#{notes:All the data here was collected with a model X super-duper measuring device}"
+#> [3] "#{notes:The equipment was calibrated using ISO 9000}"
 ```
 
 ### Helper functions
@@ -519,16 +559,16 @@ The `rcsv` package also includes several helper functions to work with rcsv file
 
 ``` r
 glimpse_rcsv( testfile )
-#> Notes:  here's the first note for this dataset
-#>  this is my second note. I might add more later.
+#> Notes:  All the data here was collected with a model X super-duper measuring device
+#>  The equipment was calibrated using ISO 9000
 #> 
 #>  "integers" <int> 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21...
-#>  "letters" <char> i,q,f,l,d,r,l,x,t,z,q,p,g,l,p,l,l,d,v,h,q...
+#>  "letters" <char> w,r,i,v,h,j,a,j,v,f,y,z,o,s,p,f,h,c,u,e,a...
 #>  "dates" <date> 2000-01-01,2000-01-02,2000-01-03,2000-01-04,2000-01-05,2000-01-0...
-#>  "posix" <posx> 2000-01-01 10:00:00,2000-01-01 10:16:40,2000-01-01 10:33:20,2000...
-#>  "itime" <itim> 09:12:46,16:39:28,00:48:45,06:24:50,21:13:41,21:39:28,08:08:54,1...
-#>  "logical" <logi> FALSE,TRUE,FALSE,TRUE,FALSE,FALSE,FALSE,FALSE,TRUE,FALSE,FALSE,T...
-#>  "factor" <fct> extra-large,small,small,small,extra-large,small,medium,small,sma...
+#>  "posix" <posx> 2000-01-01 05:00:00,2000-01-01 05:16:40,2000-01-01 05:33:20,2000...
+#>  "itime" <itim> 17:47:58,15:11:00,16:34:27,21:40:11,22:10:33,01:05:56,09:28:15,2...
+#>  "logical" <logi> FALSE,FALSE,FALSE,TRUE,TRUE,FALSE,TRUE,TRUE,FALSE,TRUE,TRUE,TRUE...
+#>  "factor" <fct> large,medium,extra-large,medium,small,small,large,medium,large,l...
 #>  "times" <time> 00:01:26,00:15:57,00:30:28,00:44:59,00:59:30,01:14:01,01:28:32,0...
 ```
 
@@ -570,6 +610,6 @@ classes_rcsv( testfile )
 
 ``` r
 notes_rcsv( testfile )
-#> Note:  here's the first note for this dataset
-#>  this is my second note. I might add more later.
+#> Note:   All the data here was collected with a model X super-duper measuring device
+#>  The equipment was calibrated using ISO 9000
 ```
