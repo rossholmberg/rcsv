@@ -31,6 +31,7 @@
 #'
 #' @import data.table
 #' @importFrom chron times
+#' @importFrom lubridate force_tz
 #'
 #' @export
 
@@ -178,7 +179,10 @@ write_rcsv <- function( input,
                                            header.posix.cols,
                                            "from:string",
                                            sep = "},{" )
-
+            # fool data.table to avoid automatic timezone shifting
+            for( col in posix.cols ) {
+                input[ , ( col ) := lubridate::force_tz( .SD[[col]], tzone = "UTC" ) ]
+            }
         }
 
     }

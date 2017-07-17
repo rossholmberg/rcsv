@@ -49,7 +49,7 @@ testDF <- function( n ) {
         integers = 1:n,
         letters = sample( letters, n, replace = TRUE ),
         dates = seq.Date( as.Date( "2000-01-01" ), by = 1, length.out = n ),
-        posix = seq.POSIXt( as.POSIXct( "2000-01-01 10:00:00", tz = "EST" ), by = 1000, length.out = n ),
+        posix = as.POSIXct( seq.int( 1E6, by = 1000, length.out = n ), tz = "EST", origin = "1970-01-01 00:00:00" ),
         itime = setattr( sample( seq_len( 86399 ), n, replace = TRUE ), "class", "ITime" ),
         logical = sample( c( TRUE, FALSE ), n, replace = T ),
         factor = factor( sample( c( "small", "medium", "large", "extra-large" ), n, replace = TRUE ),
@@ -60,7 +60,7 @@ testDF <- function( n ) {
 }
 
 set.seed( 123 )
-df <- testDF( n = 100 )
+df <- testDF( n = 1E5 )
 glimpse( df, width = 80 )
 ```
 
@@ -160,7 +160,7 @@ write.times <- microbenchmark::microbenchmark(
     rds_default = saveRDS( df, "READMEfiles/rds_default.rds" ),
     fst = fst::write.fst( df, "READMEfiles/fst.fst" ),
     feather = feather::write_feather( df, "READMEfiles/feather.feather" ),
-    times = 12
+    times = 1
 )
 write.times
 ```
@@ -212,9 +212,8 @@ read.times <- microbenchmark::microbenchmark(
     rcsv_convert = { df.convert <- rcsv::read_rcsv( "READMEfiles/rcsv_convert.rcsv" ) },
     # rds_default = { df.rds <- readRDS( "READMEfiles/rds_default.rds" ) },
     # fst = { df.fst <- fst::read.fst( "READMEfiles/fst.fst" ) },
-    csvy = { df.csvy <- csvy::read_csvy( "~/Desktop/test.csvy" ) },
     # feather = { df.feather <- feather::read_feather( "READMEfiles/feather.feather" ) },
-    times = 3
+    times = 1
 )
 read.times
 ```
@@ -233,9 +232,6 @@ ggplot( data = read.times, #setDT( read.times )[ grepl( "^rcsv|^dt|^rds|^fst|^fe
 We can see here that when reading in data, the speed of `rcsv` is good if conversions are used, but slowed significantly without conversions (even slower than `base::read.csv`). Note the time spent here is on applying conversions to the data on import. These conversions would usually need to be performed manually after import, meaning that a more appropriate comparison between both forms of `read_rcsv` and other read methods may be to include those conversion steps
 ```{r}
 read.times.with.manipulations <- microbenchmark::microbenchmark(
-    base_read = {
-        df.base <- read.csv( "READMEfiles/base_write.csv" )
-    },
     readr_read = {
         df.readr <- readr::read_csv( "READMEfiles/readr_write.csv",
                                      col_types = cols(
@@ -250,21 +246,20 @@ read.times.with.manipulations <- microbenchmark::microbenchmark(
                                          ),
                                          col_time()
                                      ) ) %>%
-            mutate( posix = as.POSIXct( posix, origin = "1970-01-01 00:00:00", tz = "EST" ) )
+            mutate( posix = as.POSIXct( posix, origin = "1970-01-01T00:00:00Z", tz = "EST" ),
+                    itime = as.ITime( itime ),
+                    times = chron::times( times ) )
         },
     dt_fread = { 
         df.fread.manip <- data.table::fread( "READMEfiles/dt_fwrite.csv" )
         df.fread.manip[ , dates := as.Date( dates ) ]
-        df.fread.manip[ , posix := as.POSIXct( posix, origin = "1970-01-01 00:00:00", tz = "EST" ) ]
+        df.fread.manip[ , posix := as.POSIXct( posix, origin = "1970-01-01T00:00:0Z", tz = "EST" ) ]
         df.fread.manip[ , itime := as.ITime( itime ) ]
         df.fread.manip[ , factor := factor( factor, levels = c( "small", "medium", "large", "extra-large" ) ) ]
         df.fread.manip[ , times := chron::times( times ) ] },
     rcsv_noconvert = { df.noconvert <- rcsv::read_rcsv( "READMEfiles/rcsv_noconvert.rcsv" ) },
     rcsv_convert = { df.convert <- rcsv::read_rcsv( "READMEfiles/rcsv_convert.rcsv" ) },
-    rds_default = { df.rds <- readRDS( "READMEfiles/rds_default.rds" ) },
-    fst = { df.fst <- fst::read.fst( "READMEfiles/fst.fst" ) },
-    feather = { df.feather <- feather::read_feather( "READMEfiles/feather.feather" ) },
-    times = 12
+    times = 1
 )
 read.times.with.manipulations
 ```

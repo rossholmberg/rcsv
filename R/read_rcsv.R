@@ -140,9 +140,12 @@ read_rcsv <- function( file, subset = NULL ) {
                                      "`. Beware of possible consequences." )
                     )
                     output[ , ( col ) := fasttime::fastPOSIXct( .SD[[col]], tz = "UTC" ) ]
+                } else if( tz %chin% c( "UTC", "GMT" ) ) {
+                    output[ , ( col ) := fasttime::fastPOSIXct( .SD[[col]], tz = tz ) ]
                 } else {
-                    output[ , ( col ) := fasttime::fastPOSIXct( .SD[[col]], tz = "UTC" ) ]
-                    setattr( output[[col]], "tzone", tz )
+                    output[ , ( col ) := as.POSIXct( .SD[[col]],
+                                                     format = "%Y-%m-%dT%H:%M:%SZ",
+                                                     tz = tz ) ]
                 }
             } else if( convert.from == "integer" ) {
                 if( tz == "none" ) {
@@ -183,9 +186,7 @@ read_rcsv <- function( file, subset = NULL ) {
         } else if( col.class == "times" ) {
 
             if( convert.from == "string" ) {
-                output[ , ( col ) := chron::times( as.numeric(
-                    fasttime::fastPOSIXct( paste( "1970-01-01", .SD[[col]] ), tz = "UTC" )
-                ) / 86400 ) ]
+                output[ , ( col ) := as_times( .SD[[col]] ) ]
             } else if( convert.from == "numeric" ) {
                 output[ , ( col ) := chron::times( as.numeric( .SD[[col]] ) ) ]
             } else {
@@ -199,10 +200,7 @@ read_rcsv <- function( file, subset = NULL ) {
         } else if( col.class == "ITime" ) {
 
             if( convert.from == "string" ) {
-                output[ , ( col ) := setattr(
-                    as.integer(
-                    fasttime::fastPOSIXct( paste( "1970-01-01", .SD[[col]] ), tz = "UTC" )
-                    ), "class", "ITime" ) ]
+                output[ , ( col ) := as_ITime( .SD[[col]] ) ]
             } else if( convert.from == "integer" ) {
                 output[ , ( col ) := setattr( as.integer( .SD[[col]] ),
                                               "class",
