@@ -2,7 +2,7 @@ Package: rcsv
 Type: Package
 Title: A custom csv format to encapsulate data frame information into text files.
     Built around the amazing and fantastic and delicious data.table `fread` and `fwrite` functions
-Version: 0.12
+Version: 0.20
 Authors@R: person( "Ross", "Holmberg", email = "ross@holmberg.com.au", role = c( "aut", "cre" ) )
 Maintainer: Ross Holmberg <ross@holmberg.com.au>
 Description: Building a (very minor) extension to the standard csv format to allow easy data storage and recall in R
@@ -17,5 +17,6 @@ License: GPL-3 + file LICENSE
 URL: https://github.com/rossholmberg/rcsv
 Encoding: UTF-8
 LazyData: true
-Imports: data.table, chron, fasttime
-RoxygenNote: 6.0.1
+Imports: data.table, chron, fasttime, Rcpp (>= 0.12.10)
+RoxygenNote: 6.0.1.9000
+LinkingTo: Rcpp

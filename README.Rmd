@@ -205,15 +205,16 @@ Note most csv writers create files of similar sizes, but the `rcsv` format with 
 
 ```{r, message=FALSE, warning=FALSE}
 read.times <- microbenchmark::microbenchmark(
-    base_read = { df.base <- read.csv( "READMEfiles/base_write.csv" ) },
-    readr_read = { df.readr <- readr::read_csv( "READMEfiles/readr_write.csv" ) },
+    # base_read = { df.base <- read.csv( "READMEfiles/base_write.csv" ) },
+    # readr_read = { df.readr <- readr::read_csv( "READMEfiles/readr_write.csv" ) },
     dt_fread = { df.fread <- data.table::fread( "READMEfiles/dt_fwrite.csv" ) },
     rcsv_noconvert = { df.noconvert <- rcsv::read_rcsv( "READMEfiles/rcsv_noconvert.rcsv" ) },
     rcsv_convert = { df.convert <- rcsv::read_rcsv( "READMEfiles/rcsv_convert.rcsv" ) },
-    rds_default = { df.rds <- readRDS( "READMEfiles/rds_default.rds" ) },
-    fst = { df.fst <- fst::read.fst( "READMEfiles/fst.fst" ) },
-    feather = { df.feather <- feather::read_feather( "READMEfiles/feather.feather" ) },
-    times = 12
+    # rds_default = { df.rds <- readRDS( "READMEfiles/rds_default.rds" ) },
+    # fst = { df.fst <- fst::read.fst( "READMEfiles/fst.fst" ) },
+    csvy = { df.csvy <- csvy::read_csvy( "~/Desktop/test.csvy" ) },
+    # feather = { df.feather <- feather::read_feather( "READMEfiles/feather.feather" ) },
+    times = 3
 )
 read.times
 ```
