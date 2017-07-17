@@ -303,7 +303,7 @@ write_rcsv <- function( input,
                         file = file,
                         append = TRUE,
                         sep = ",", sep2 = c( "", "|", "" ),
-                        dateTimeAs = "write.csv",
+                        dateTimeAs = "ISO",
                         logicalAsInt = logical.as.int,
                         col.names = TRUE,
                         showProgress = TRUE
