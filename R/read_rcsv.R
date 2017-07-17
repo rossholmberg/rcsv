@@ -141,7 +141,7 @@ read_rcsv <- function( file, subset = NULL ) {
                     )
                     output[ , ( col ) := fasttime::fastPOSIXct( .SD[[col]], tz = "UTC" ) ]
                 } else {
-                    output[ , ( col ) := fasttime::fastPOSIXct( .SD[[col]] ) ]
+                    output[ , ( col ) := fasttime::fastPOSIXct( .SD[[col]], tz = "UTC" ) ]
                     setattr( output[[col]], "tzone", tz )
                 }
             } else if( convert.from == "integer" ) {
@@ -183,7 +183,9 @@ read_rcsv <- function( file, subset = NULL ) {
         } else if( col.class == "times" ) {
 
             if( convert.from == "string" ) {
-                output[ , ( col ) := chron::times( .SD[[col]] ) ]
+                output[ , ( col ) := chron::times( as.numeric(
+                    fasttime::fastPOSIXct( paste( "1970-01-01", .SD[[col]] ), tz = "UTC" )
+                ) / 86400 ) ]
             } else if( convert.from == "numeric" ) {
                 output[ , ( col ) := chron::times( as.numeric( .SD[[col]] ) ) ]
             } else {
@@ -197,7 +199,10 @@ read_rcsv <- function( file, subset = NULL ) {
         } else if( col.class == "ITime" ) {
 
             if( convert.from == "string" ) {
-                output[ , ( col ) := as.ITime( chron::times( .SD[[col]] ) ) ]
+                output[ , ( col ) := setattr(
+                    as.integer(
+                    fasttime::fastPOSIXct( paste( "1970-01-01", .SD[[col]] ), tz = "UTC" )
+                    ), "class", "ITime" ) ]
             } else if( convert.from == "integer" ) {
                 output[ , ( col ) := setattr( as.integer( .SD[[col]] ),
                                               "class",
