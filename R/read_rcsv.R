@@ -6,13 +6,14 @@
 #'
 #' @param file file path to which the rscv will be written
 #' @param subset integer vector of rows to read
+#' @param echo.notes print notes to the console on import?
 #' @import data.table
 #' @importFrom chron times
 #' @importFrom fasttime fastPOSIXct
 #'
 #' @export
 
-read_rcsv <- function( file, subset = NULL ) {
+read_rcsv <- function( file, subset = NULL, echo.notes = TRUE ) {
 
     .SD <- notes <- NULL
 
@@ -132,9 +133,10 @@ read_rcsv <- function( file, subset = NULL ) {
 
         } else if( col.class == "POSIXct" ) {
             tz <- gsub( ".*tz:|}.*", "", header[ col ] )
+            tzoffset <- as.numeric( gsub( ".*tzoffset:|}.*", "", header[ col ] ) )
 
             if( convert.from == "string" ) {
-                if( tz == "none" ) {
+                if( tz == "none" && { is.null( tzoffset ) || is.na( tzoffset ) } ) {
                     warning( paste0( "Timezone is not set for POSIXct column: `",
                                      column.names[ col ],
                                      "`. Beware of possible consequences." )
@@ -143,9 +145,7 @@ read_rcsv <- function( file, subset = NULL ) {
                 } else if( tz %chin% c( "UTC", "GMT" ) ) {
                     output[ , ( col ) := fasttime::fastPOSIXct( .SD[[col]], tz = tz ) ]
                 } else {
-                    output[ , ( col ) := as.POSIXct( .SD[[col]],
-                                                     format = "%Y-%m-%dT%H:%M:%SZ",
-                                                     tz = tz ) ]
+                    output[ , ( col ) := as_posix( .SD[[col]], tz = tz ) ]
                 }
             } else if( convert.from == "integer" ) {
                 if( tz == "none" ) {
@@ -247,8 +247,10 @@ read_rcsv <- function( file, subset = NULL ) {
         notes <- gsub( ".*notes:|}.*", "", notes )
         setattr( output, "notes", notes )
 
-        # also print those notes to the console
-        cat( "Notes: ", paste( notes, collapse = "\n\t" ) )
+        # also print those notes to the console if requested
+        if( echo.notes ) {
+            cat( "Notes: ", paste( notes, collapse = "\n\t" ) )
+        }
 
     }
 

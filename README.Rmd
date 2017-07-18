@@ -60,24 +60,47 @@ testDF <- function( n ) {
 }
 
 set.seed( 123 )
-df <- testDF( n = 1E5 )
+df <- testDF( n = 100 )
 glimpse( df, width = 80 )
 ```
 
+### Add notes
+
+An important feature of the `rcsv` format is the ability to include notes on the data within the file itself. We'll do that here for demonstration.
+```{r}
+notes_replace( df, "Here's an example note." )
+```
+```{r}
+notes_add( df, "And another one." )
+```
+
+
 ### write_rcsv with default parameters
 
-A simple call to `write_rcsv` will write out the object to csv as with any csv writing function.
+A simple call to `write_rcsv` will write out the object to csv as with any csv writing function. The notes are printed to the console on file write.
 ```{r}
 testfile <- "READMEfiles/test.rcsv"
 write_rcsv( df, testfile )
 ```
 
-Note that at the top of this file though, is a (JSON-like) header:
+Noticee that at the top of this file though, is a (JSON-like) header:
 ```{r}
 readLines( testfile, n = 12 )
 ```
 
 The first line of the file contains some basic details about the file structure, below which is a series of lines specifying details of each column. This "header" section will be used by `read_rcsv` to import the data frame in a manner matching the file written out, without the need for special parameters on the read call, or additional manipulations after import.
+
+Before importing the file, we can take a look at it in a few ways. `glimpse_rcsv` shows any notes, along with a `head` style sample of the data.
+```{r}
+glimpse_rcsv( testfile )
+```
+
+`notes_rcsv` shows just the notes.
+```{r}
+notes_rcsv( testfile )
+```
+
+
 ```{r}
 df.readrcsv <- read_rcsv( testfile )
 glimpse( df.readrcsv )

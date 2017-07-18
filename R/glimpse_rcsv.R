@@ -16,7 +16,20 @@
 
 glimpse_rcsv <- function( file, width = 80 ) {
 
-    input <- head_rcsv( file, width / 2 - 19L )
+    # open a connection to the file
+    con <- file( file, "r" )
+    # read in a single line, this will contain a few basic table details
+    head.line <- readLines( con = con, n = 1 )
+    close( con )
+
+    # get the total number of rows in the table
+    row.count <- as.integer( gsub( ".*\\{tablerows:|\\}.*", "", head.line ) )
+
+    # read the top of the file
+    input <- head_rcsv( file,
+                        ifelse( width > 50, width / 2 - 19L, width ),
+                        echo.notes = FALSE
+    )
 
     col.names <- names( input )
     col.names.short <- substr( col.names, 0, 9L )
@@ -56,7 +69,10 @@ glimpse_rcsv <- function( file, width = 80 ) {
         substr( data, 0, width - 16 ), "..."
     )
 
-    cat( "\n\n", paste( strings, collapse = "\n " ), "\n" )
+    cat( "\n\n",
+         paste( "file:\t\t", file ), "\n",
+         paste( "total rows:\t", row.count ), "\n\n",
+         paste( strings, collapse = "\n " ), "\n" )
 
     return( invisible( TRUE ) )
 

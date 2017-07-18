@@ -4,12 +4,14 @@
 \alias{head_rcsv}
 \title{head_rcsv}
 \usage{
-head_rcsv(file, n = 6)
+head_rcsv(file, n = 6, echo.notes = TRUE)
 }
 \arguments{
 \item{file}{file path from which the rscv will be read}
 
 \item{n}{integer, number of rows to read}
+
+\item{echo.notes}{print notes to the console on import?}
 }
 \description{
 read only the first few lines of an rscv file

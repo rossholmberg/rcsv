@@ -7,14 +7,17 @@
 #'
 #' @param file file path from which the rscv will be read
 #' @param n integer, number of rows to read
+#' @param echo.notes print notes to the console on import?
 #'
 #' @importFrom utils head
 #'
 #' @export
 
-head_rcsv <- function( file, n = 6 ) {
+head_rcsv <- function( file, n = 6, echo.notes = TRUE ) {
 
-    input <- read_rcsv( file, subset = seq_len( n ) )
+    input <- read_rcsv( file,
+                        subset = seq_len( n ),
+                        echo.notes )
 
     utils::head( input, n )
 
