@@ -4,13 +4,15 @@
 \alias{glimpse_rcsv}
 \title{glimpse_rcsv}
 \usage{
-glimpse_rcsv(file, width = 80)
+glimpse_rcsv(file, width = 80, echo = TRUE)
 }
 \arguments{
 \item{file}{file path to which the rscv will be written}
 
 \item{width}{integer, approximate character length of each line
 of the output display}
+
+\item{echo}{logical, echo the glimpse (TRUE), or just silently return details (FALSE)}
 }
 \description{
 display a short summary of the contents of an rcsv

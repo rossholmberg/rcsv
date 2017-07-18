@@ -11,6 +11,7 @@
 
 
 names_rcsv <- function( file ) {
+
     # open a connection to the file
     con <- file( file, "r" )
 

@@ -13,8 +13,15 @@
 notes_add <- function( x, notes ) {
 
     current <- attr( x, "notes" )
+
+    if( grepl( "\\{|\\}", notes ) ) {
+        warning( "Sorry, curly braces ('{' and '}') are reserved characters, so they're being replaced with square ones." )
+        notes <- gsub( "\\{", "[", notes )
+        notes <- gsub( "\\}", "]", notes )
+    }
+
     setattr( x, "notes", c( current, notes ) )
 
-    cat( "Note:  ", paste( c( current, notes ), collapse = "\n\t" ) )
+    cat( "Notes:  ", paste( c( current, notes ), collapse = "\n\t" ) )
 
 }
