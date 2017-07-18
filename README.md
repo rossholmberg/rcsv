@@ -127,7 +127,7 @@ glimpse_rcsv( testfile )
 #>  "itime" <itim> 05:43:46,23:05:47,14:25:58,12:21:39,09:39:42,21:07:33,08:44:18,0...
 #>  "logical" <logi> FALSE,TRUE,FALSE,FALSE,FALSE,TRUE,TRUE,TRUE,TRUE,TRUE,TRUE,TRUE,...
 #>  "factor" <fct> extra-large,small,extra-large,large,medium,medium,large,small,me...
-#>  "times" <time>   4.378041, 40.669708, 76.961377,113.253044,149.544711,185.83637...
+#>  "times" <time> 00:01:26,00:15:57,00:30:28,00:44:59,00:59:30,01:14:01,01:28:32,0...
 ```
 
 `notes_rcsv` shows just the notes.
@@ -155,7 +155,7 @@ dplyr::glimpse( df.readrcsv, width = 80 )
 #> $ itime    <S3: ITime> 05:43:46, 23:05:47, 14:25:58, 12:21:39, 09:39:42, 21...
 #> $ logical  <lgl> FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, ...
 #> $ factor   <fctr> extra-large, small, extra-large, large, medium, medium, l...
-#> $ times    <S3: times>   3.588715,  39.880382,  76.172049, 112.463715, 148....
+#> $ times    <S3: times> 00:01:26, 00:15:57, 00:30:28, 00:44:59, 00:59:30, 01...
 ```
 
 All columns have been read in with identical column classes as the original test data frame.
@@ -174,7 +174,7 @@ glimpse( df.base, width = 80 )
 #> $ itime    <fctr> 05:43:46, 23:05:47, 14:25:58, 12:21:39, 09:39:42, 21:07:3...
 #> $ logical  <lgl> FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, ...
 #> $ factor   <fctr> extra-large, small, extra-large, large, medium, medium, l...
-#> $ times    <dbl> 86.4000, 957.3818, 1828.3636, 2699.3455, 3570.3273, 4441.3...
+#> $ times    <fctr> 00:01:26, 00:15:57, 00:30:28, 00:44:59, 00:59:30, 01:14:0...
 ```
 
 Using a regular reader however, will not necessarily import the columns correctly (note several incorrect import formats above). Even with the very good `readr` package, which does a great job, we won't always correctly attribute the original column classes, because there is ambiguity on the user's original intent.
@@ -191,7 +191,7 @@ glimpse( df.readr, width = 80 )
 #> $ itime    <time> 05:43:46, 23:05:47, 14:25:58, 12:21:39, 09:39:42, 21:07:3...
 #> $ logical  <lgl> FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, ...
 #> $ factor   <chr> "extra-large", "small", "extra-large", "large", "medium", ...
-#> $ times    <dbl> 86.4000, 957.3818, 1828.3636, 2699.3455, 3570.3273, 4441.3...
+#> $ times    <time> 00:01:26, 00:15:57, 00:30:28, 00:44:59, 00:59:30, 01:14:0...
 ```
 
 Some of these issues will be easily fixed, like converting factors to strings, or vice-versa. Some are less simple though, for example timezones are generally\* not printed to csv files, meaning they are often read into memory with different timezone attributes from the original data frame. This can be difficult to notice if special care is not taken, and can have serious consequences. \*worth noting that `data.table::fwrite` does have a facility for this
@@ -199,12 +199,12 @@ Some of these issues will be easily fixed, like converting factors to strings, o
 ``` r
 cat( "Testing for timezone changes:\n",
      "from original data frame:\t", as.character( df$posix[1] ), attr( df$posix[1], "tzone" ), "\n",
-     "using read_rcsv:\t\t", as.character( df.readrcsv$posix[1] ), attr( df.readrcsv$posix[1], "tzone" ), "\n",
+     "using read_rcsv:\t\t\t", as.character( df.readrcsv$posix[1] ), attr( df.readrcsv$posix[1], "tzone" ), "\n",
      "using readr::read_csv:\t\t", as.character( df.readr$posix[1] ), attr( df.readr$posix[1], "tzone" ), "\n",
      "using base::read.csv:\t\t", as.character( df.base$posix[1] ), attr( df.base$posix[1], "tzone" ), "\n" )
 #> Testing for timezone changes:
 #>  from original data frame:    1970-01-12 08:46:40 EST 
-#>  using read_rcsv:         1970-01-12 08:46:40 EST 
+#>  using read_rcsv:             1970-01-12 08:46:40 EST 
 #>  using readr::read_csv:       1970-01-12 08:46:40 UTC 
 #>  using base::read.csv:        1970-01-12T08:46:40Z
 ```
@@ -214,12 +214,12 @@ cat( "Testing for timezone changes:\n",
 ``` r
 cat( "Testing for factor level changes:\n",
      "from original data frame:\t", levels( df$factor ), "\n",
-     "using read_rcsv:\t\t", levels( df.readrcsv$factor ), "\n",
+     "using read_rcsv:\t\t\t", levels( df.readrcsv$factor ), "\n",
      "using readr::read_csv:\t\t", levels( df.readr$factor ), "\n",
      "using base::read.csv:\t\t", levels( df.base$factor ) )
 #> Testing for factor level changes:
 #>  from original data frame:    small medium large extra-large 
-#>  using read_rcsv:         small medium large extra-large 
+#>  using read_rcsv:             small medium large extra-large 
 #>  using readr::read_csv:       
 #>  using base::read.csv:        extra-large large medium small
 ```
@@ -281,7 +281,7 @@ To see the file size and speed advantages, we'll create a more meaningful (bigge
 
 ### File write speeds
 
-We test the speed of file writing between a few of the methods available to an R user. Note that we include lots of methods in the test runs, but will only plot results from `data.table` and `rcsv`. This is because `base` and `readr` are too much slower, while `fst` and `feather` are too much faster, such that the plot doesn't
+We test the speed of file writing between a few of the methods available to an R user.
 
 ``` r
 n <- 1E5
@@ -299,24 +299,24 @@ write.times <- microbenchmark::microbenchmark(
 )
 write.times
 #> Unit: milliseconds
-#>            expr         min          lq       mean     median         uq
-#>      base_write 1931.127298 2060.221790 2144.60537 2128.11139 2163.70939
-#>     readr_write 1820.935353 1873.197071 2005.23290 1959.67116 2042.99346
-#>       dt_fwrite   32.153674   32.697134   35.77106   34.78226   36.13871
-#>  rcsv_noconvert   65.466372   96.788592  122.58695  121.23134  138.77673
-#>    rcsv_convert   40.971337   41.711634   66.93835   45.13162   70.31361
-#>     rds_default  422.961961  434.327053  441.27742  440.33175  442.83090
-#>             fst   10.017157   10.386111   17.09566   15.78816   17.60664
-#>         feather    9.256641    9.512548   14.85351   11.00877   18.16628
+#>            expr         min         lq       mean     median         uq
+#>      base_write 2050.616581 2169.06049 2242.07429 2222.89481 2283.56690
+#>     readr_write 1782.745208 1929.53600 2014.14687 2027.13836 2121.32754
+#>       dt_fwrite   30.122020   33.28811   38.98628   36.03252   43.76402
+#>  rcsv_noconvert  644.743483  675.17439  710.75272  710.49990  747.81415
+#>    rcsv_convert   41.021875   43.87057   58.57046   47.63672   68.84932
+#>     rds_default  424.853882  431.81920  448.66197  451.48628  464.02057
+#>             fst    9.940724   10.44796   14.35584   12.15364   16.07817
+#>         feather    8.909940    9.53738   12.18169   10.72773   12.67195
 #>         max neval
-#>  2467.29072    12
-#>  2661.37234    12
-#>    50.62839    12
-#>   209.15943    12
-#>   159.07654    12
-#>   479.14624    12
-#>    44.25084    12
-#>    33.59048    12
+#>  2545.88775    12
+#>  2174.87142    12
+#>    54.99758    12
+#>   778.18107    12
+#>   126.99867    12
+#>   471.20674    12
+#>    29.43091    12
+#>    27.05626    12
 ```
 
 `write_rcsv` is built around the fantastic `data.table::fwrite` function, making it much faster than both `base::write.csv` and `readr::write_csv`. It even maintains relatively good performance compared with `data.table::fwrite`, but is slowed a little by the conversion processes and header writing steps.
@@ -375,24 +375,24 @@ read.times <- microbenchmark::microbenchmark(
 )
 read.times
 #> Unit: milliseconds
-#>            expr         min          lq       mean      median         uq
-#>       base_read 1835.757562 1885.305005 1949.17992 1956.796624 2001.87284
-#>      readr_read  149.089714  153.638326  187.28356  172.894527  179.57735
-#>        dt_fread  102.912953  107.018000  120.58426  109.459241  116.53701
-#>  rcsv_noconvert  196.394610  211.553510  264.77436  241.467774  313.64774
-#>    rcsv_convert   89.165519   97.265420  135.07193  116.748703  171.30221
-#>     rds_default   42.407433   44.562795   46.75718   46.414861   47.99111
-#>             fst    5.554504    6.243983   14.27721    8.088979   24.25252
-#>         feather    5.643028    6.348995   15.49629    6.856979   18.17032
+#>            expr         min          lq       mean      median          uq
+#>       base_read 1770.199968 1839.583601 1904.31066 1907.045507 1936.387603
+#>      readr_read  155.231034  156.703759  184.56671  175.772007  189.621672
+#>        dt_fread   97.076331  100.207529  108.08245  101.725917  106.558531
+#>  rcsv_noconvert  209.311596  220.481310  274.10303  245.507979  336.954340
+#>    rcsv_convert   88.983317   99.754266  136.46583  116.356605  166.972832
+#>     rds_default   43.636243   44.873069   53.27304   46.751769   62.808681
+#>             fst    4.991276    5.964459   10.99024    6.730787   13.753967
+#>         feather    5.210306    5.734830   12.43495    6.304319    6.781458
 #>         max neval
-#>  2101.57543    12
-#>   418.58564    12
-#>   229.59080    12
-#>   395.56212    12
-#>   222.29594    12
-#>    54.66310    12
-#>    36.25811    12
-#>    67.91926    12
+#>  2088.31212    12
+#>   289.55568    12
+#>   158.78637    12
+#>   358.57932    12
+#>   242.30296    12
+#>    78.20566    12
+#>    28.39620    12
+#>    63.10485    12
 ```
 
 ``` r
@@ -439,20 +439,20 @@ read.times.with.manipulations <- microbenchmark::microbenchmark(
                      ][ , times := chron::times( times ) ] },
     rcsv_noconvert = { df.noconvert <- rcsv::read_rcsv( "READMEfiles/rcsv_noconvert.rcsv" ) },
     rcsv_convert = { df.convert <- rcsv::read_rcsv( "READMEfiles/rcsv_convert.rcsv" ) },
-    times = 1
+    times = 12
 )
 read.times.with.manipulations
 #> Unit: milliseconds
-#>            expr        min         lq       mean     median         uq
-#>      readr_read  726.28376  726.28376  726.28376  726.28376  726.28376
-#>        dt_fread 2701.28153 2701.28153 2701.28153 2701.28153 2701.28153
-#>  rcsv_noconvert  203.13476  203.13476  203.13476  203.13476  203.13476
-#>    rcsv_convert   90.37458   90.37458   90.37458   90.37458   90.37458
-#>         max neval
-#>   726.28376     1
-#>  2701.28153     1
-#>   203.13476     1
-#>    90.37458     1
+#>            expr        min         lq      mean     median        uq
+#>      readr_read  630.40776  651.25501  694.0291  681.01659  734.4557
+#>        dt_fread 2458.91582 2478.24915 2512.3559 2491.38298 2548.1720
+#>  rcsv_noconvert  209.28948  213.84355  223.1494  222.61162  230.9654
+#>    rcsv_convert   85.26303   90.16911  107.8706   97.16449  109.1036
+#>        max neval
+#>   786.9516    12
+#>  2598.5502    12
+#>   239.4585    12
+#>   215.2681    12
 ```
 
 ``` r
@@ -494,7 +494,7 @@ print( tests )
 #> [1] "TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE"
 #> 
 #> $df.noconvert
-#> [1] "TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, Mean relative difference: 3598.96"
+#> [1] "TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, Mean relative difference: 5.787027e-06"
 #> 
 #> $df.fread.manip
 #> [1] "TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE"
@@ -573,13 +573,13 @@ details <- glimpse_rcsv( testfile )
 #>       The equipment was calibrated using ISO 9000 
 #> 
 #>  "integers" <int> 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21...
-#>  "letters" <char> e,b,p,l,f,m,x,l,h,d,l,y,b,s,i,q,b,g,q,u,u...
-#>  "dates" <date> 2087-12-23,1992-04-16,1987-08-27,2111-08-22,2027-05-12,2052-08-1...
+#>  "letters" <char> k,v,m,b,d,b,r,y,e,e,w,g,c,d,w,i,o,o,g,u,q...
+#>  "dates" <date> 2014-09-27,2052-01-30,2116-01-24,2132-02-25,2174-04-05,2115-07-0...
 #>  "posix" <posx> 1970-01-12 08:46:40,1970-01-12 09:03:20,1970-01-12 09:20:00,1970...
-#>  "itime" <itim> 04:14:07,03:57:24,14:50:17,05:52:44,19:19:42,20:50:34,03:14:51,1...
-#>  "logical" <logi> FALSE,FALSE,FALSE,FALSE,TRUE,TRUE,FALSE,FALSE,FALSE,FALSE,FALSE,...
-#>  "factor" <fct> extra-large,small,medium,extra-large,large,small,extra-large,lar...
-#>  "times" <time>   3.589555, 39.881221, 76.172888,112.464560,148.756227,185.04789...
+#>  "itime" <itim> 16:05:32,14:13:41,13:56:27,07:06:03,21:06:30,13:13:53,18:28:28,1...
+#>  "logical" <logi> TRUE,TRUE,FALSE,FALSE,TRUE,FALSE,TRUE,TRUE,FALSE,FALSE,TRUE,TRUE...
+#>  "factor" <fct> small,small,small,large,small,medium,large,medium,medium,medium,...
+#>  "times" <time> 00:01:26,00:15:57,00:30:28,00:44:59,00:59:30,01:14:01,01:28:32,0...
 ```
 
 Useful details are returned as a list, meaning they can be referenced using `$` or `[[`

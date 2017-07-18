@@ -1,7 +1,7 @@
 ---
 title: "rcsv"
 author: "Ross Holmberg"
-date: "04 May 2017"
+date: "18 Jul 2017"
 output:
   md_document:
     variant: markdown_github
@@ -128,7 +128,7 @@ Some of these issues will be easily fixed, like converting factors to strings, o
 ```{r}
 cat( "Testing for timezone changes:\n",
      "from original data frame:\t", as.character( df$posix[1] ), attr( df$posix[1], "tzone" ), "\n",
-     "using read_rcsv:\t\t", as.character( df.readrcsv$posix[1] ), attr( df.readrcsv$posix[1], "tzone" ), "\n",
+     "using read_rcsv:\t\t\t", as.character( df.readrcsv$posix[1] ), attr( df.readrcsv$posix[1], "tzone" ), "\n",
      "using readr::read_csv:\t\t", as.character( df.readr$posix[1] ), attr( df.readr$posix[1], "tzone" ), "\n",
      "using base::read.csv:\t\t", as.character( df.base$posix[1] ), attr( df.base$posix[1], "tzone" ), "\n" )
 ```
@@ -137,7 +137,7 @@ cat( "Testing for timezone changes:\n",
 ```{r}
 cat( "Testing for factor level changes:\n",
      "from original data frame:\t", levels( df$factor ), "\n",
-     "using read_rcsv:\t\t", levels( df.readrcsv$factor ), "\n",
+     "using read_rcsv:\t\t\t", levels( df.readrcsv$factor ), "\n",
      "using readr::read_csv:\t\t", levels( df.readr$factor ), "\n",
      "using base::read.csv:\t\t", levels( df.base$factor ) )
 ```
@@ -173,7 +173,7 @@ To see the file size and speed advantages, we'll create a more meaningful (bigge
 
 ### File write speeds
 
-We test the speed of file writing between a few of the methods available to an R user. Note that we include lots of methods in the test runs, but will only plot results from `data.table` and `rcsv`. This is because `base` and `readr` are too much slower, while `fst` and `feather` are too much faster, such that the plot doesn't 
+We test the speed of file writing between a few of the methods available to an R user. 
 
 ```{r, message=FALSE}
 n <- 1E5
@@ -286,7 +286,7 @@ read.times.with.manipulations <- microbenchmark::microbenchmark(
                      ][ , times := chron::times( times ) ] },
     rcsv_noconvert = { df.noconvert <- rcsv::read_rcsv( "READMEfiles/rcsv_noconvert.rcsv" ) },
     rcsv_convert = { df.convert <- rcsv::read_rcsv( "READMEfiles/rcsv_convert.rcsv" ) },
-    times = 1
+    times = 12
 )
 read.times.with.manipulations
 ```
