@@ -11,25 +11,30 @@
 #' @param file file path to which the rscv will be written
 #' @param width integer, approximate character length of each line
 #' of the output display
+#' @param echo logical, echo the glimpse (TRUE), or just silently return details (FALSE)
 #'
 #' @export
 
-glimpse_rcsv <- function( file, width = 80 ) {
+glimpse_rcsv <- function( file, width = 80, echo = TRUE ) {
+
 
     # open a connection to the file
     con <- file( file, "r" )
     # read in a single line, this will contain a few basic table details
     head.line <- readLines( con = con, n = 1 )
+    headlines.num <- as.integer( gsub( ".*\\{headlines:|\\}.*", "", head.line ) )
+    head.lines <- readLines( con = con, n = headlines.num - 1L )
     close( con )
 
     # get the total number of rows in the table
     row.count <- as.integer( gsub( ".*\\{tablerows:|\\}.*", "", head.line ) )
 
     # read the top of the file
-    input <- head_rcsv( file,
-                        ifelse( width > 50, width / 2 - 19L, width ),
-                        echo.notes = FALSE
-    )
+    input <- read_rcsv( file,
+                        subset = seq_len( ifelse( width > 50,
+                                                  width / 2 - 19L,
+                                                  width ) ),
+                        echo.notes = FALSE )
 
     col.names <- names( input )
     col.names.short <- substr( col.names, 0, 9L )
@@ -43,6 +48,16 @@ glimpse_rcsv <- function( file, width = 80 ) {
                                class(x)[1]
                            },
                            FUN.VALUE = character( 1L ) )
+
+    notes <- head.lines[ grepl( "note", head.lines ) ]
+    notes <- gsub( ".*\\{notes:|\\}.*", "", notes )
+
+    output <- list(
+        dim = c( rows = row.count, cols = ncol( input ) ),
+        names = col.names,
+        classes = col.classes,
+        notes = notes
+    )
 
     col.classes[ col.classes == "integer" ] <- "int"
     col.classes[ col.classes == "character" ] <- "char"
@@ -71,9 +86,13 @@ glimpse_rcsv <- function( file, width = 80 ) {
 
     cat( "\n\n",
          paste( "file:\t\t", file ), "\n",
+         paste( "total cols:\t", length( data ) ), "\n",
          paste( "total rows:\t", row.count ), "\n\n",
+         "Notes:\t\t",
+         paste( notes, collapse = "\n\t\t " ), "\n\n",
+         # "----- DATA FOLLOWS ----- :\n",
          paste( strings, collapse = "\n " ), "\n" )
 
-    return( invisible( TRUE ) )
+    return( invisible( output ) )
 
 }

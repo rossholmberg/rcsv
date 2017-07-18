@@ -48,7 +48,9 @@ testDF <- function( n ) {
     data.frame(
         integers = 1:n,
         letters = sample( letters, n, replace = TRUE ),
-        dates = seq.Date( as.Date( "2000-01-01" ), by = 1, length.out = n ),
+        dates = sample(
+            seq.Date( as.Date( "1970-01-01" ), as.Date( "2199-12-31" ), by = 1 ),
+            n, replace = TRUE ),
         posix = as.POSIXct( seq.int( 1E6, by = 1000, length.out = n ), tz = "EST", origin = "1970-01-01 00:00:00" ),
         itime = setattr( sample( seq_len( 86399 ), n, replace = TRUE ), "class", "ITime" ),
         logical = sample( c( TRUE, FALSE ), n, replace = T ),
@@ -90,7 +92,7 @@ readLines( testfile, n = 12 )
 
 The first line of the file contains some basic details about the file structure, below which is a series of lines specifying details of each column. This "header" section will be used by `read_rcsv` to import the data frame in a manner matching the file written out, without the need for special parameters on the read call, or additional manipulations after import.
 
-Before importing the file, we can take a look at it in a few ways. `glimpse_rcsv` shows any notes, along with a `head` style sample of the data.
+Before importing the file, we can take a look at it in a few ways. `glimpse_rcsv` shows important details about the file, including notes and a `dplyr::glimpse`-alike view of the dataset, without loading the file into memory. (We go a little more into the `glimpse` function later.)
 ```{r}
 glimpse_rcsv( testfile )
 ```
@@ -103,7 +105,9 @@ notes_rcsv( testfile )
 
 ```{r}
 df.readrcsv <- read_rcsv( testfile )
-glimpse( df.readrcsv )
+```
+```{r}
+dplyr::glimpse( df.readrcsv, width = 80 )
 ```
 All columns have been read in with identical column classes as the original test data frame.
 
@@ -172,7 +176,7 @@ To see the file size and speed advantages, we'll create a more meaningful (bigge
 We test the speed of file writing between a few of the methods available to an R user. Note that we include lots of methods in the test runs, but will only plot results from `data.table` and `rcsv`. This is because `base` and `readr` are too much slower, while `fst` and `feather` are too much faster, such that the plot doesn't 
 
 ```{r, message=FALSE}
-n <- 1E6
+n <- 1E5
 df <- testDF( n )
 write.times <- microbenchmark::microbenchmark(
     base_write = write.csv( df, "READMEfiles/base_write.csv" ),
@@ -183,7 +187,7 @@ write.times <- microbenchmark::microbenchmark(
     rds_default = saveRDS( df, "READMEfiles/rds_default.rds" ),
     fst = fst::write.fst( df, "READMEfiles/fst.fst" ),
     feather = feather::write_feather( df, "READMEfiles/feather.feather" ),
-    times = 1
+    times = 12
 )
 write.times
 ```
@@ -228,15 +232,15 @@ Note most csv writers create files of similar sizes, but the `rcsv` format with 
 
 ```{r, message=FALSE, warning=FALSE}
 read.times <- microbenchmark::microbenchmark(
-    # base_read = { df.base <- read.csv( "READMEfiles/base_write.csv" ) },
-    # readr_read = { df.readr <- readr::read_csv( "READMEfiles/readr_write.csv" ) },
+    base_read = { df.base <- read.csv( "READMEfiles/base_write.csv" ) },
+    readr_read = { df.readr <- readr::read_csv( "READMEfiles/readr_write.csv" ) },
     dt_fread = { df.fread <- data.table::fread( "READMEfiles/dt_fwrite.csv" ) },
     rcsv_noconvert = { df.noconvert <- rcsv::read_rcsv( "READMEfiles/rcsv_noconvert.rcsv" ) },
     rcsv_convert = { df.convert <- rcsv::read_rcsv( "READMEfiles/rcsv_convert.rcsv" ) },
-    # rds_default = { df.rds <- readRDS( "READMEfiles/rds_default.rds" ) },
-    # fst = { df.fst <- fst::read.fst( "READMEfiles/fst.fst" ) },
-    # feather = { df.feather <- feather::read_feather( "READMEfiles/feather.feather" ) },
-    times = 1
+    rds_default = { df.rds <- readRDS( "READMEfiles/rds_default.rds" ) },
+    fst = { df.fst <- fst::read.fst( "READMEfiles/fst.fst" ) },
+    feather = { df.feather <- feather::read_feather( "READMEfiles/feather.feather" ) },
+    times = 12
 )
 read.times
 ```
@@ -252,34 +256,34 @@ ggplot( data = read.times, #setDT( read.times )[ grepl( "^rcsv|^dt|^rds|^fst|^fe
           subtitle = sprintf( "%s row by %s column data frame.", n, ncol( df ) ) )
 ```
 
-We can see here that when reading in data, the speed of `rcsv` is good if conversions are used, but slowed significantly without conversions (even slower than `base::read.csv`). Note the time spent here is on applying conversions to the data on import. These conversions would usually need to be performed manually after import, meaning that a more appropriate comparison between both forms of `read_rcsv` and other read methods may be to include those conversion steps
+We can see here that when reading in data, the speed of `rcsv` is excellent if conversions are used, and very competitive even without conversions. Note the time spent here is on applying conversions to the data on import. These conversions would usually need to be performed manually after import, meaning that a more appropriate comparison between both forms of `read_rcsv` and other read methods may be to include those conversion steps
 ```{r}
 read.times.with.manipulations <- microbenchmark::microbenchmark(
     readr_read = {
-        df.readr <- readr::read_csv( "READMEfiles/readr_write.csv",
-                                     col_types = cols(
-                                         col_integer(),
-                                         col_character(),
-                                         col_date(),
-                                         col_character(),
-                                         col_time(),
-                                         col_logical(),
-                                         col_factor(
-                                             levels = c( "small", "medium", "large", "extra-large" )
-                                         ),
-                                         col_time()
-                                     ) ) %>%
-            mutate( posix = as.POSIXct( posix, origin = "1970-01-01T00:00:00Z", tz = "EST" ),
+        df.readr.manip <- readr::read_csv( "READMEfiles/readr_write.csv",
+                                           col_types = cols(
+                                               col_integer(),
+                                               col_character(),
+                                               col_date(),
+                                               col_datetime(),
+                                               col_time(),
+                                               col_logical(),
+                                               col_factor(
+                                                   levels = c( "small", "medium", "large", "extra-large" )
+                                               ),
+                                               col_time()
+                                           ) ) %>%
+            mutate( posix = lubridate::with_tz( posix, tzone = "EST" ),
                     itime = as.ITime( itime ),
                     times = chron::times( times ) )
         },
     dt_fread = { 
         df.fread.manip <- data.table::fread( "READMEfiles/dt_fwrite.csv" )
-        df.fread.manip[ , dates := as.Date( dates ) ]
-        df.fread.manip[ , posix := as.POSIXct( posix, origin = "1970-01-01T00:00:0Z", tz = "EST" ) ]
-        df.fread.manip[ , itime := as.ITime( itime ) ]
-        df.fread.manip[ , factor := factor( factor, levels = c( "small", "medium", "large", "extra-large" ) ) ]
-        df.fread.manip[ , times := chron::times( times ) ] },
+        df.fread.manip[ , dates := as.Date( dates )
+                     ][ , posix := fasttime::fastPOSIXct( posix, tz = "EST" )
+                     ][ , itime := as.ITime( itime )
+                     ][ , factor := factor( factor, levels = c( "small", "medium", "large", "extra-large" ) )
+                     ][ , times := chron::times( times ) ] },
     rcsv_noconvert = { df.noconvert <- rcsv::read_rcsv( "READMEfiles/rcsv_noconvert.rcsv" ) },
     rcsv_convert = { df.convert <- rcsv::read_rcsv( "READMEfiles/rcsv_convert.rcsv" ) },
     times = 1
@@ -298,34 +302,30 @@ ggplot( setDT( read.times.with.manipulations )[ grepl( "^base|^readr|^rcsv|^dt",
           subtitle = sprintf( "%s row by %s column data frame.", n, ncol( df ) ) )
 ```
 
-So, assuming you'll be performing the necessary data conversions on import, `fread` is actually significantly slower than `rcsv`. In the case of `rcsv_convert`, this is due to the fact that converting from numeric variables is often faster than from character. In the case of `rcsv_noconvert`, it is largely due to the use of the `fasttime` package in converting Date and POSIXct variables, which offers significant speed improvements over `as.Date` and `as.POSIXct` functions.
+So, assuming you'll be performing the necessary data conversions on import, `fread` is actually significantly slower than `rcsv`. In the case of `rcsv_convert`, this is due to the fact that converting from numeric variables is often faster than from character. In the case of `rcsv_noconvert`, it is largely due to the use of several speed optimisations, including the use of the `fasttime` package in converting Date and POSIXct variables, which offers significant speed improvements over `as.Date` and `as.POSIXct` functions.
 
 ## Data integrity
 ### Testing that the data has been read in correctly.
 
 To test for correct data read, ee look at each column of each imported data frame, and compare it to the matching column in the original data frame. In this way, we see if the data has remained consistent through the write/read process.
-
-Note: We use `all.equal` here, since `identical` seems too fussy in this case. I'm not sure why, but there often seems to be some invisible characteristics of some columns which cause `identical` to return FALSE, even though everything seems to be the same.
 ```{r, warning=FALSE}
 tests <- lapply( X = list( df.convert = df.convert,
                            df.noconvert = df.noconvert,
-                           # df.fread = df.fread,
                            df.fread.manip = df.fread.manip,
-                           df.base = df.base[-1],
-                           df.readr = df.readr ),
+                           df.readr.manip = df.readr.manip ),
                  FUN = function(x) {
                      sapply( seq_along( df ),
                              function(i) all.equal( df[[i]], x[[i]] )
                      )
                  }
 ) %>%
-    lapply( function(x) paste( x, collapse = " " ) )
+    lapply( function(x) paste( x, collapse = ", " ) )
 print( tests )
 ```
 
 It's clear here that imports using regular csv readers will need some work to bring the data back to the way it should be. This manipulation needs to be repeated every time a dataset is read into memory, which can be quite prohibitive to a smooth workflow. With `rcsv`, the data is read back into R in the same form as before it was written out*, with no additional time or effort on the part of the user.
 
-* the one exception here is where `times` values have been stored without numeric conversion. The slight discrepancy in the values retrieved is due to the conversion of greater than 1s precision time values to formatted strings ("h:m:s"), which does not allow for the storage of such high precision. Turning conversion on in the `write_rcsv` call solves this by storing as numeric, and therefore retaining the precision of the original data.
+* the one exception here is where `times` values have been stored without numeric conversion. The slight discrepancy in the values retrieved is due to the conversion of greater than 1s precision time values to formatted strings ("h:m:s"), which does not allow for the storage of such high precision. Turning conversion on in the `write_rcsv` call solves this by storing as numeric, and therefore retaining the precision of the original data. `fwrite` defaults to writing `times` values as numeric, but we overwrite this where necessary to create a more portable csv file (times written out as "h:m:s" character strings).
 
 ## Additional features
 
@@ -337,7 +337,7 @@ df <- testDF( 100 )
 notes_add( df, "All the data here was collected with a model X super-duper measuring device" )
 ```
 
-This note can be replaced, by using `notes_replace`, or we can add another note with `notes_add`
+We can replace any existing notes with `notes_replace`, or we can add another note with `notes_add`
 ```{r}
 notes_add( df, "The equipment was calibrated using ISO 9000" )
 ```
@@ -363,36 +363,29 @@ The `rcsv` package also includes several helper functions to work with rcsv file
 
 ### glimpse_rcsv
 
-`glimpse_rcsv` displays a `dplyr::glimpse`-like view of the data, without loading the entire dataset into memory.
+`glimpse_rcsv` displays a `dplyr::glimpse`-like view of the data in the console (and silently returns a list of these details), without loading the entire dataset into memory. This is a very efficient way of viewing key details about a dataset without importing it.
 ```{r}
-glimpse_rcsv( testfile )
+details <- glimpse_rcsv( testfile )
 ```
 
-### dim_rcsv
-
-`dim_rcsv` returns the dimensions of the given dataset as a named vector, without loading the dataset itself.
+Useful details are returned as a list, meaning they can be referenced using `$` or `[[`
 ```{r}
-dim_rcsv( testfile )
+print( details )
+```
+```{r}
+details$dim
 ```
 
-### names_rcsv
-
-`names_rcsv` returns the column names, without loading the dataset.
-```{r}
-names_rcsv( testfile )
-```
-
-### classes_rcsv
-
-`classes_rcsv` returns the column classes as a named vector (column names are vector names), without loading the dataset.
-```{r}
-classes_rcsv( testfile )
-```
 
 ### notes_rcsv
 
 `notes_rcsv` returns only the notes associated with a data file, without loading the dataset.
 ```{r}
 notes_rcsv( testfile )
+```
+
+This will also accept a data frame with the "notes" attribute. ie: after being read into R
+```{r}
+notes_rcsv( df )
 ```
 

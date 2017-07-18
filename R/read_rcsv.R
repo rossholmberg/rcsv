@@ -153,11 +153,11 @@ read_rcsv <- function( file, subset = NULL, echo.notes = TRUE ) {
                                      column.names[ col ],
                                      "`. Beware of possible consequences." )
                     )
-                    output[ , ( col ) := as.POSIXct( as.integer( .SD[[col]] ),
+                    output[ , ( col ) := as.POSIXct( .SD[[col]],
                                                      origin = "1970-01-01 00:00:00",
                                                      tz = "UTC" ) ]
                 } else {
-                    output[ , ( col ) := as.POSIXct( as.integer( .SD[[col]] ),
+                    output[ , ( col ) := as.POSIXct( .SD[[col]],
                                                      origin = "1970-01-01 00:00:00",
                                                      tz = tz ) ]
                 }
@@ -249,7 +249,7 @@ read_rcsv <- function( file, subset = NULL, echo.notes = TRUE ) {
 
         # also print those notes to the console if requested
         if( echo.notes ) {
-            cat( "Notes: ", paste( notes, collapse = "\n\t" ) )
+            cat( "Notes: ", paste( notes, collapse = "\n\t" ), "\n" )
         }
 
     }

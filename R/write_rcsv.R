@@ -210,7 +210,8 @@ write_rcsv <- function( input,
         } else {
             for( col in times.cols ) {
                 # convert to ITime so that fwrite writes it out properly
-                input[ , ( col ) := as.ITime( .SD[[col]] ) ]
+                input[ , ( col ) := .SD[[col]] * 86400 ]
+                setattr( input[[col]], "class", "ITime" )
             }
             header[ times.cols ] <- paste( header[ times.cols ],
                                            "from:string",
@@ -324,7 +325,7 @@ write_rcsv <- function( input,
     )
 
     if( !is.null( notes ) ) {
-        cat( "Notes: ", paste( sub( "^notes:", "", notes ), collapse = "\n\t" ) )
+        cat( "Notes: ", paste( sub( "^notes:", "", notes ), collapse = "\n\t" ), "\n" )
     }
 
     return( invisible( TRUE ) )

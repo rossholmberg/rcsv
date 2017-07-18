@@ -12,8 +12,8 @@
 
 notes_replace <- function( x, notes ) {
 
-    setattr( x, "notes", notes )
+    setattr( x, "notes", NULL )
 
-    cat( "Note: ", paste( notes, collapse = "\n\t" ) )
+    notes_add( x, notes )
 
 }
