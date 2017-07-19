@@ -4,5 +4,5 @@
 .Ruserdata
 *csv
 READMEfiles*
-src/*.so
-src/*.o
+*.so
+*.o
