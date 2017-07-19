@@ -158,25 +158,35 @@ write_rcsv <- function( input,
     # add timezone to any POSIXct columns
     if( "POSIXct" %chin% column.classes ) {
         posix.cols <- which( column.classes == "POSIXct" )
-        header.posix.cols <- vapply(
+        header.posix.cols.tz <- vapply(
             X = input[ , posix.cols, with = FALSE ],
             FUN = attr,
-            FUN.VALUE = vector( "character", length = length( posix.cols ) ),
+            FUN.VALUE = NA_character_,
             which = "tzone"
         )
-        header.posix.cols[ header.posix.cols == "" ] <- "none"
-        header.posix.cols <- paste0( "tz:", header.posix.cols )
+        header.posix.cols.tz[ header.posix.cols.tz == "" ] <- "none"
+        header.posix.cols.tz <- paste0( "tz:", header.posix.cols.tz )
+
+        header.posix.cols.offset <- vapply(
+            X = input[ , posix.cols, with = FALSE ],
+            FUN = tz_offset,
+            FUN.VALUE = NA_real_
+        )
+        header.posix.cols.offset <- paste0( "tzoffset:", header.posix.cols.offset )
+
         if( posix.as.num ) {
             for( col in posix.cols ) {
                 input[ , ( col ) := as.integer( .SD[[col]] ) ]
             }
             header[ posix.cols ] <- paste( header[ posix.cols ],
-                                           header.posix.cols,
+                                           header.posix.cols.tz,
+                                           header.posix.cols.offset,
                                            "from:integer",
                                            sep = "},{" )
         } else {
             header[ posix.cols ] <- paste( header[ posix.cols ],
-                                           header.posix.cols,
+                                           header.posix.cols.tz,
+                                           header.posix.cols.offset,
                                            "from:string",
                                            sep = "},{" )
             # fool data.table to avoid automatic timezone shifting
@@ -200,7 +210,7 @@ write_rcsv <- function( input,
         } else {
             for( col in times.cols ) {
                 # convert to ITime so that fwrite writes it out properly
-                input[ , ( col ) := as.ITime( .SD[[col]] ) ]
+                input[ , ( col ) := as.character( .SD[[col]] ) ]
             }
             header[ times.cols ] <- paste( header[ times.cols ],
                                            "from:string",
@@ -314,7 +324,7 @@ write_rcsv <- function( input,
     )
 
     if( !is.null( notes ) ) {
-        cat( "Notes: ", paste( sub( "^notes:", "", notes ), collapse = "\n\t" ) )
+        cat( "Notes: ", paste( sub( "^notes:", "", notes ), collapse = "\n\t" ), "\n" )
     }
 
     return( invisible( TRUE ) )

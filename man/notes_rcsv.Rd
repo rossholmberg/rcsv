@@ -4,15 +4,15 @@
 \alias{notes_rcsv}
 \title{notes_rcsv}
 \usage{
-notes_rcsv(file)
+notes_rcsv(x)
 }
 \arguments{
-\item{file}{file path from which the rscv will be read}
+\item{x}{object name or file path from which the rscv will be read}
 }
 \description{
-extract notes from an rcsv file
+extract notes from an rcsv file or object
 }
 \details{
-extract notes from an rcsv file without loading
-the entire file into memory
+display dataset notes, extracting from an rcsv file if necessary,
+without loading the entire file into memory
 }

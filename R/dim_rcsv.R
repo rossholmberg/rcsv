@@ -23,8 +23,8 @@ dim_rcsv <- function( file ) {
         stop( "This is not an rcsv file, consider using a different file reader." )
     }
 
-    nrows <- as.integer( gsub( ".*tablerows:|}.*", "", head.line ) )
-    ncols <- as.integer( gsub( ".*headlines:|}.*", "", head.line ) ) - 1L
+    nrows <- as.integer( gsub( ".*\\{tablerows:|\\}.*", "", head.line ) )
+    ncols <- as.integer( gsub( ".*\\{colreflines:|\\}.*", "", head.line ) )
 
     return( c( rows = nrows, cols = ncols ) )
 
