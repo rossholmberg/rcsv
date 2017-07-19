@@ -197,6 +197,55 @@ glimpse( df.readr, width = 80 )
 #> $ times    <time> 00:01:26, 00:15:57, 00:30:28, 00:44:59, 00:59:30, 01:14:0...
 ```
 
+Also try with `csvy`, a great package by Thomas J Leeper (<https://github.com/leeper/csvy>), looking to solve issues with csv use in a similar way to here.
+
+``` r
+testfile <- "READMEfiles/test.rcsv"
+csvy::write_csvy( df, "READMEfiles/test.csvy" )
+#> Warning in a$fields[[i]][2] <- class(x[[i]]): number of items to replace is
+#> not a multiple of replacement length
+#> Warning in write.table(file = file, x = x, append = TRUE, sep = sep, dec =
+#> sep2, : appending column names to file
+#> [1] "READMEfiles/test.csvy"
+df.readcsvy <- csvy::read_csvy( "READMEfiles/test.csvy" )
+dplyr::glimpse( df.readcsvy, width = 80 )
+#> Observations: 100
+#> Variables: 8
+#> $ integers <int> 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17,...
+#> $ letters  <chr> "h", "u", "k", "w", "y", "b", "n", "x", "o", "l", "y", "l"...
+#> $ dates    <chr> "2107-12-31", "2046-07-20", "2082-05-19", "2189-07-12", "2...
+#> $ posix    <chr> "1970-01-12 08:46:40", "1970-01-12 09:03:20", "1970-01-12 ...
+#> $ itime    <chr> "05:43:46", "23:05:47", "14:25:58", "12:21:39", "09:39:42"...
+#> $ logical  <lgl> FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, ...
+#> $ factor   <chr> "extra-large", "small", "extra-large", "large", "medium", ...
+#> $ times    <chr> "00:01:26", "00:15:57", "00:30:28", "00:44:59", "00:59:30"...
+```
+
+Note some issues are solved, but there is still significant work to do before the data is back to its original format. In particular, datetime and factor formats are returned as character columns, albeit with some helpful information stored as attributes.
+
+``` r
+sapply( df.readcsvy[,c(3,4,5,7,8)], attributes )
+#> $dates
+#> NULL
+#> 
+#> $posix
+#> $posix$tzone
+#> [1] "EST"
+#> 
+#> 
+#> $itime
+#> NULL
+#> 
+#> $factor
+#> $factor$levels
+#> [1] "small"       "medium"      "large"       "extra-large"
+#> 
+#> 
+#> $times
+#> $times$format
+#> [1] "h:m:s"
+```
+
 Some of these issues will be easily fixed, like converting factors to strings, or vice-versa. Some are less simple though, for example timezones are generally\* not printed to csv files, meaning they are often read into memory with different timezone attributes from the original data frame. This can be difficult to notice if special care is not taken, and can have serious consequences. \*worth noting that `data.table::fwrite` does have a facility for this
 
 ``` r
@@ -219,15 +268,17 @@ cat( "Testing for factor level changes:\n",
      "from original data frame:\t", levels( df$factor ), "\n",
      "using read_rcsv:\t\t\t", levels( df.readrcsv$factor ), "\n",
      "using readr::read_csv:\t\t", levels( df.readr$factor ), "\n",
+     "using csvy::read_csvy:\t\t", levels( df.readcsvy$factor ), "\n",
      "using base::read.csv:\t\t", levels( df.base$factor ) )
 #> Testing for factor level changes:
 #>  from original data frame:    small medium large extra-large 
 #>  using read_rcsv:             small medium large extra-large 
 #>  using readr::read_csv:       
+#>  using csvy::read_csvy:       small medium large extra-large 
 #>  using base::read.csv:        extra-large large medium small
 ```
 
-`readr` defaults all columns without other conversion triggers to `character` class (hence there are no levels to display here). `read.csv` defaults these columns to `factor` class, but automatically sorts levels in alphabetical order, which may not be appropriate, as is the case here. `rcsv` determines whether or not to convert a column to factor based on the data frame from which it was written, and stores then extracts the correct factor levels, including their order.
+`readr` defaults all columns without other conversion triggers to `character` class (hence there are no levels to display here). `csvy` correctly stores and retrieves the factor levels, but leaves the column as `character` class. `read.csv` defaults these columns to `factor` class, but automatically sorts levels in alphabetical order, which may not be appropriate, as is the case here. `rcsv` determines whether or not to convert a column to factor based on the data frame from which it was written, and stores then extracts the correct factor levels, including their order.
 
 ### using write\_rcsv with data conversion options
 
@@ -294,6 +345,7 @@ n <- 1E5
 df <- testDF( n )
 write.times <- microbenchmark::microbenchmark(
     base_write = write.csv( df, "READMEfiles/base_write.csv" ),
+    csvy_write = csvy::write_csvy( df, "READMEfiles/csvy_write.csvy" ),
     readr_write = readr::write_csv( df, "READMEfiles/readr_write.csv" ),
     dt_fwrite = data.table::fwrite( df, "READMEfiles/dt_fwrite.csv" ),
     rcsv_noconvert = rcsv::write_rcsv( df, "READMEfiles/rcsv_noconvert.rcsv" ),
@@ -303,26 +355,76 @@ write.times <- microbenchmark::microbenchmark(
     feather = feather::write_feather( df, "READMEfiles/feather.feather" ),
     times = 12
 )
+#> Warning in a$fields[[i]][2] <- class(x[[i]]): number of items to replace is
+#> not a multiple of replacement length
+#> Warning in write.table(file = file, x = x, append = TRUE, sep = sep, dec =
+#> sep2, : appending column names to file
+#> Warning in a$fields[[i]][2] <- class(x[[i]]): number of items to replace is
+#> not a multiple of replacement length
+#> Warning in write.table(file = file, x = x, append = TRUE, sep = sep, dec =
+#> sep2, : appending column names to file
+#> Warning in a$fields[[i]][2] <- class(x[[i]]): number of items to replace is
+#> not a multiple of replacement length
+#> Warning in write.table(file = file, x = x, append = TRUE, sep = sep, dec =
+#> sep2, : appending column names to file
+#> Warning in a$fields[[i]][2] <- class(x[[i]]): number of items to replace is
+#> not a multiple of replacement length
+#> Warning in write.table(file = file, x = x, append = TRUE, sep = sep, dec =
+#> sep2, : appending column names to file
+#> Warning in a$fields[[i]][2] <- class(x[[i]]): number of items to replace is
+#> not a multiple of replacement length
+#> Warning in write.table(file = file, x = x, append = TRUE, sep = sep, dec =
+#> sep2, : appending column names to file
+#> Warning in a$fields[[i]][2] <- class(x[[i]]): number of items to replace is
+#> not a multiple of replacement length
+#> Warning in write.table(file = file, x = x, append = TRUE, sep = sep, dec =
+#> sep2, : appending column names to file
+#> Warning in a$fields[[i]][2] <- class(x[[i]]): number of items to replace is
+#> not a multiple of replacement length
+#> Warning in write.table(file = file, x = x, append = TRUE, sep = sep, dec =
+#> sep2, : appending column names to file
+#> Warning in a$fields[[i]][2] <- class(x[[i]]): number of items to replace is
+#> not a multiple of replacement length
+#> Warning in write.table(file = file, x = x, append = TRUE, sep = sep, dec =
+#> sep2, : appending column names to file
+#> Warning in a$fields[[i]][2] <- class(x[[i]]): number of items to replace is
+#> not a multiple of replacement length
+#> Warning in write.table(file = file, x = x, append = TRUE, sep = sep, dec =
+#> sep2, : appending column names to file
+#> Warning in a$fields[[i]][2] <- class(x[[i]]): number of items to replace is
+#> not a multiple of replacement length
+#> Warning in write.table(file = file, x = x, append = TRUE, sep = sep, dec =
+#> sep2, : appending column names to file
+#> Warning in a$fields[[i]][2] <- class(x[[i]]): number of items to replace is
+#> not a multiple of replacement length
+#> Warning in write.table(file = file, x = x, append = TRUE, sep = sep, dec =
+#> sep2, : appending column names to file
+#> Warning in a$fields[[i]][2] <- class(x[[i]]): number of items to replace is
+#> not a multiple of replacement length
+#> Warning in write.table(file = file, x = x, append = TRUE, sep = sep, dec =
+#> sep2, : appending column names to file
 write.times
 #> Unit: milliseconds
-#>            expr         min          lq       mean      median         uq
-#>      base_write 2041.665661 2152.615432 2217.37180 2196.721061 2264.42605
-#>     readr_write 1868.495453 1981.885070 2038.54860 2013.841968 2125.89219
-#>       dt_fwrite   31.218609   32.065960   34.73217   33.299292   35.68307
-#>  rcsv_noconvert  661.864865  683.496033  728.47201  717.284687  751.03250
-#>    rcsv_convert   40.527412   41.560537   56.70949   44.274680   69.24308
-#>     rds_default  440.414554  442.229897  460.95943  458.189173  474.36831
-#>             fst    9.603177    9.721027   13.59323   11.787356   14.33337
-#>         feather    8.906546    9.282094   10.96685    9.646314   11.21606
+#>            expr         min          lq       mean     median         uq
+#>      base_write 1892.275241 1920.634331 2071.62366 2041.58149 2117.15647
+#>      csvy_write 1921.851768 1982.747639 2040.63525 2029.70842 2095.58228
+#>     readr_write 1784.717959 1874.332927 1907.50850 1896.47826 1945.72923
+#>       dt_fwrite   31.009089   32.835363   33.94921   33.81373   35.51984
+#>  rcsv_noconvert  595.436717  636.185753  678.12924  665.69128  714.31435
+#>    rcsv_convert   40.429801   41.840497   62.81886   54.12148   69.63089
+#>     rds_default  424.053992  439.299166  454.07322  444.41349  462.87916
+#>             fst    9.591155   10.661112   21.35015   13.36918   18.96208
+#>         feather    9.218395    9.517326   15.37526   10.13300   16.34822
 #>         max neval
-#>  2520.15320    12
-#>  2228.80600    12
-#>    45.52502    12
-#>   841.44069    12
-#>   126.61868    12
-#>   489.24868    12
-#>    33.42652    12
-#>    21.56478    12
+#>  2689.26513    12
+#>  2215.55675    12
+#>  2051.38503    12
+#>    37.14890    12
+#>   774.44934    12
+#>   158.14255    12
+#>   518.73882    12
+#>   103.43708    12
+#>    40.67204    12
 ```
 
 `write_rcsv` is built around the fantastic `data.table::fwrite` function, making it much faster than both `base::write.csv` and `readr::write_csv`. It even maintains relatively good performance compared with `data.table::fwrite`, but is slowed a little by the conversion processes and header writing steps.
@@ -331,14 +433,14 @@ write.times
 ggplot( write.times,
         mapping = aes( expr, time/1E9, colour = expr ) ) +
     geom_violin( show.legend = FALSE ) +
-    geom_jitter( size = 1, alpha = 0.4, width = 0.25, show.legend = FALSE ) +
+    geom_jitter( size = 1, alpha = 0.4, width = 0.5, show.legend = FALSE ) +
     ylab( "write time (s)" ) + xlab( "" ) +
     ylim( c( 0, NA ) ) +
     labs( title = "File write times.",
           subtitle = sprintf( "%s row by %s column data frame.", n, ncol( df ) ) )
 ```
 
-![](READMEfigs/unnamed-chunk-19-1.png)
+![](READMEfigs/unnamed-chunk-21-1.png)
 
 The speed differences between `dt.fwrite`, `rcsv.noconvert`, and `rcsv.convert` seen here are the result of additional processing in the `write_rcsv` function (slowing it down), and the advantage of writing fewer characters to file (speeding it up where `strings.convert` == TRUE). Without string conversions, `rcsv` generally writes with comparable speed to `saveRDS`, while turning the string conversions on can make it significantly faster.
 
@@ -361,7 +463,7 @@ ggplot( data = data.frame( files = gsub( ".*\\/|\\..*", "", files ), size = size
     )
 ```
 
-![](READMEfigs/unnamed-chunk-20-1.png)
+![](READMEfigs/unnamed-chunk-22-1.png)
 
 Note most csv writers create files of similar sizes, but the `rcsv` format with string conversions can (in some circumstances) result in significant file size reductions. We do not have the same file size benefit of the compressed (as per default settings) `rds` format, so if file size is of paramount importance, it may be worth sticking with the rds format, or including an extra file compression step to your workflow; that is not the primary concern here though.
 
@@ -370,6 +472,7 @@ Note most csv writers create files of similar sizes, but the `rcsv` format with 
 ``` r
 read.times <- microbenchmark::microbenchmark(
     base_read = { df.base <- read.csv( "READMEfiles/base_write.csv" ) },
+    csvy_read = { df.csvy <- csvy::read_csvy( "READMEfiles/csvy_write.csvy" ) },
     readr_read = { df.readr <- readr::read_csv( "READMEfiles/readr_write.csv" ) },
     dt_fread = { df.fread <- data.table::fread( "READMEfiles/dt_fwrite.csv" ) },
     rcsv_noconvert = { df.noconvert <- rcsv::read_rcsv( "READMEfiles/rcsv_noconvert.rcsv" ) },
@@ -381,38 +484,40 @@ read.times <- microbenchmark::microbenchmark(
 )
 read.times
 #> Unit: milliseconds
-#>            expr         min          lq        mean     median          uq
-#>       base_read 1868.719425 1914.788615 1982.255296 1958.11861 2018.403611
-#>      readr_read  158.194305  162.613146  188.189757  177.87227  193.068399
-#>        dt_fread   97.503365  100.979011  105.467709  102.68326  108.472006
-#>  rcsv_noconvert  203.351055  226.312980  274.691320  241.12584  331.211979
-#>    rcsv_convert   98.317096  113.711342  148.513387  128.59836  183.886843
-#>     rds_default   44.062025   47.623549   54.064613   49.30708   62.122414
-#>             fst    4.867486    6.540487    9.609539    7.03472    8.357452
-#>         feather    5.123905    5.807993    9.973762    6.69188    7.389927
+#>            expr         min          lq       mean      median          uq
+#>       base_read 1785.224060 1869.052976 1938.48362 1960.220479 2003.150657
+#>       csvy_read 1206.738151 1236.645295 1331.76077 1340.313560 1406.100369
+#>      readr_read  154.414239  163.532888  195.84388  173.978499  197.584783
+#>        dt_fread  104.414238  108.803280  125.70642  111.352527  144.528411
+#>  rcsv_noconvert  211.125705  230.804597  264.25857  238.917271  279.251499
+#>    rcsv_convert   89.250014   96.880959  128.62581  100.757934  140.026239
+#>     rds_default   44.207550   46.517145   48.50546   48.562050   50.400840
+#>             fst    6.727024    7.083920   12.22314    7.667641    8.752264
+#>         feather    5.254878    6.671743   26.84354    6.929982   34.344735
 #>         max neval
-#>  2188.15433    12
-#>   316.92221    12
-#>   118.94102    12
-#>   371.79447    12
-#>   237.90034    12
-#>    71.49639    12
-#>    28.84116    12
-#>    30.23217    12
+#>  2068.38172    12
+#>  1472.37685    12
+#>   328.78558    12
+#>   162.64403    12
+#>   456.11027    12
+#>   288.05291    12
+#>    53.63903    12
+#>    35.52125    12
+#>   161.66687    12
 ```
 
 ``` r
-ggplot( data = read.times, #setDT( read.times )[ grepl( "^rcsv|^dt|^rds|^fst|^feather", expr ) ], 
+ggplot( data = read.times,
         mapping = aes( expr, time/1E9, colour = expr ) ) +
     geom_violin( show.legend = FALSE ) +
-    geom_jitter( size = 1, alpha = 0.4, width = 0.25, show.legend = FALSE ) +
+    geom_jitter( size = 1, alpha = 0.4, width = 0.5, show.legend = FALSE ) +
     ylab( "read time (s)" ) + xlab( "" ) +
     ylim( c( 0, NA ) ) +
     labs( title = "File read times.",
           subtitle = sprintf( "%s row by %s column data frame.", n, ncol( df ) ) )
 ```
 
-![](READMEfigs/unnamed-chunk-22-1.png)
+![](READMEfigs/unnamed-chunk-24-1.png)
 
 We can see here that when reading in data, the speed of `rcsv` is excellent if conversions are used, and very competitive even without conversions. Note the time spent here is on applying conversions to the data on import. These conversions would usually need to be performed manually after import, meaning that a more appropriate comparison between both forms of `read_rcsv` and other read methods may be to include those conversion steps
 
@@ -445,34 +550,44 @@ read.times.with.manipulations <- microbenchmark::microbenchmark(
                      ][ , times := chron::times( times ) ] },
     rcsv_noconvert = { df.noconvert <- rcsv::read_rcsv( "READMEfiles/rcsv_noconvert.rcsv" ) },
     rcsv_convert = { df.convert <- rcsv::read_rcsv( "READMEfiles/rcsv_convert.rcsv" ) },
+    csvy = {
+        df.csvy <- csvy::read_csvy( "READMEfiles/csvy_write.csvy" )
+        df.csvy$dates <- as.Date( df.csvy$dates )
+        df.csvy$posix <- as.POSIXct( df.csvy$posix, tz = attr( df.csvy$posix, "tzone" ) )
+        df.csvy$itime <- as.ITime( df.csvy$itime )
+        df.csvy$factor <- factor( df.csvy$factor, levels = attr( df.csvy$factor, "levels" ) )
+        df.csvy$times <- chron::times( df.csvy$times )
+    },
     times = 12
 )
 read.times.with.manipulations
 #> Unit: milliseconds
-#>            expr        min         lq      mean     median        uq
-#>      readr_read  612.85806  637.03119  698.4770  679.17092  768.9131
-#>        dt_fread 2414.14187 2453.70571 2511.9350 2464.73922 2582.0660
-#>  rcsv_noconvert  201.61653  210.72137  218.2322  220.20953  225.5082
-#>    rcsv_convert   93.31488   95.16434  113.1085   99.96889  117.9124
+#>            expr        min        lq      mean    median        uq
+#>      readr_read  610.71222  620.5702  681.6942  651.2171  717.5017
+#>        dt_fread 2393.99505 2528.7620 2630.1601 2655.8896 2767.2509
+#>  rcsv_noconvert  204.63623  220.7728  234.3002  236.9866  245.7570
+#>    rcsv_convert   89.56982  101.5485  110.3539  110.6825  118.1645
+#>            csvy 6259.41599 6367.7079 6625.7986 6556.4902 6796.8890
 #>        max neval
-#>   785.7703    12
-#>  2704.3046    12
-#>   228.1607    12
-#>   216.1064    12
+#>   869.2659    12
+#>  2774.8020    12
+#>   263.7635    12
+#>   137.7625    12
+#>  7271.0296    12
 ```
 
 ``` r
 ggplot( setDT( read.times.with.manipulations )[ grepl( "^base|^readr|^rcsv|^dt", expr ) ],
         mapping = aes( expr, time/1E9, colour = expr ) ) +
     geom_violin( show.legend = FALSE ) +
-    geom_jitter( size = 1, alpha = 0.4, width = 0.25, show.legend = FALSE ) +
+    geom_jitter( size = 1, alpha = 0.4, width = 0.5, show.legend = FALSE ) +
     ylab( "read time (s)" ) + xlab( "" ) +
     ylim( c( 0, NA ) ) +
     labs( title = "File read times, with column manipulations where necessary.",
           subtitle = sprintf( "%s row by %s column data frame.", n, ncol( df ) ) )
 ```
 
-![](READMEfigs/unnamed-chunk-24-1.png)
+![](READMEfigs/unnamed-chunk-26-1.png)
 
 So, assuming you'll be performing the necessary data conversions on import, `fread` is actually significantly slower than `rcsv`. In the case of `rcsv_convert`, this is due to the fact that converting from numeric variables is often faster than from character. In the case of `rcsv_noconvert`, it is largely due to the use of several speed optimisations, including the use of the `fasttime` package in converting Date and POSIXct variables, which offers significant speed improvements over `as.Date` and `as.POSIXct` functions.
 
@@ -481,13 +596,14 @@ Data integrity
 
 ### Testing that the data has been read in correctly.
 
-To test for correct data read, ee look at each column of each imported data frame, and compare it to the matching column in the original data frame. In this way, we see if the data has remained consistent through the write/read process.
+To test for correct data read, we look at each column of each imported data frame, and compare it to the matching column in the original data frame. In this way, we see if the data has remained consistent through the write/read process.
 
 ``` r
 tests <- lapply( X = list( df.convert = df.convert,
                            df.noconvert = df.noconvert,
                            df.fread.manip = df.fread.manip,
-                           df.readr.manip = df.readr.manip ),
+                           df.readr.manip = df.readr.manip,
+                           df.csvy = df.csvy ),
                  FUN = function(x) {
                      sapply( seq_along( df ),
                              function(i) all.equal( df[[i]], x[[i]] )
@@ -506,6 +622,9 @@ print( tests )
 #> [1] "TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE"
 #> 
 #> $df.readr.manip
+#> [1] "TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, Mean relative difference: 5.787027e-06"
+#> 
+#> $df.csvy
 #> [1] "TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, Mean relative difference: 5.787027e-06"
 ```
 
@@ -579,12 +698,12 @@ details <- glimpse_rcsv( testfile )
 #>       The equipment was calibrated using ISO 9000 
 #> 
 #>  "integers" <int> 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21...
-#>  "letters" <char> k,v,m,b,d,b,r,y,e,e,w,g,c,d,w,i,o,o,g,u,q...
-#>  "dates" <date> 2014-09-27,2052-01-30,2116-01-24,2132-02-25,2174-04-05,2115-07-0...
+#>  "letters" <char> h,g,u,s,p,r,i,m,b,i,e,x,p,w,r,y,f,j,q,s,x...
+#>  "dates" <date> 1986-04-15,2050-02-07,2031-04-26,2103-04-18,2022-12-06,2027-09-1...
 #>  "posix" <posx> 1970-01-12 08:46:40,1970-01-12 09:03:20,1970-01-12 09:20:00,1970...
-#>  "itime" <itim> 16:05:32,14:13:41,13:56:27,07:06:03,21:06:30,13:13:53,18:28:28,1...
-#>  "logical" <logi> TRUE,TRUE,FALSE,FALSE,TRUE,FALSE,TRUE,TRUE,FALSE,FALSE,TRUE,TRUE...
-#>  "factor" <fct> small,small,small,large,small,medium,large,medium,medium,medium,...
+#>  "itime" <itim> 21:32:51,01:36:18,02:20:54,17:40:16,03:03:45,02:35:28,21:08:26,0...
+#>  "logical" <logi> FALSE,FALSE,FALSE,TRUE,TRUE,TRUE,TRUE,FALSE,TRUE,FALSE,FALSE,TRU...
+#>  "factor" <fct> large,small,small,small,small,extra-large,large,extra-large,extr...
 #>  "times" <time> 00:01:26,00:15:57,00:30:28,00:44:59,00:59:30,01:14:01,01:28:32,0...
 ```
 

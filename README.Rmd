@@ -106,10 +106,13 @@ notes_rcsv( testfile )
 ```{r}
 df.readrcsv <- read_rcsv( testfile )
 ```
+
+
 ```{r}
 dplyr::glimpse( df.readrcsv, width = 80 )
 ```
 All columns have been read in with identical column classes as the original test data frame.
+
 
 Note that since the header section is designated by a # at the beginning of each line. This means that any csv reader can still read the file, with "#" passed as a comment character.
 ```{r}
@@ -122,6 +125,20 @@ Using a regular reader however, will not necessarily import the columns correctl
 df.readr <- readr::read_csv( testfile, comment = "#" )
 glimpse( df.readr, width = 80 )
 ```
+
+
+Also try with `csvy`, a great package by Thomas J Leeper (https://github.com/leeper/csvy), looking to solve issues with csv use in a similar way to here.
+```{r}
+testfile <- "READMEfiles/test.rcsv"
+csvy::write_csvy( df, "READMEfiles/test.csvy" )
+df.readcsvy <- csvy::read_csvy( "READMEfiles/test.csvy" )
+dplyr::glimpse( df.readcsvy, width = 80 )
+```
+Note some issues are solved, but there is still significant work to do before the data is back to its original format. In particular, datetime and factor formats are returned as character columns, albeit with some helpful information stored as attributes.
+```{r}
+sapply( df.readcsvy[,c(3,4,5,7,8)], attributes )
+```
+
 
 Some of these issues will be easily fixed, like converting factors to strings, or vice-versa. Some are less simple though, for example timezones are generally* not printed to csv files, meaning they are often read into memory with different timezone attributes from the original data frame. This can be difficult to notice if special care is not taken, and can have serious consequences.
 *worth noting that `data.table::fwrite` does have a facility for this
@@ -139,10 +156,12 @@ cat( "Testing for factor level changes:\n",
      "from original data frame:\t", levels( df$factor ), "\n",
      "using read_rcsv:\t\t\t", levels( df.readrcsv$factor ), "\n",
      "using readr::read_csv:\t\t", levels( df.readr$factor ), "\n",
+     "using csvy::read_csvy:\t\t", levels( df.readcsvy$factor ), "\n",
      "using base::read.csv:\t\t", levels( df.base$factor ) )
 ```
 
 `readr` defaults all columns without other conversion triggers to `character` class (hence there are no levels to display here).
+`csvy` correctly stores and retrieves the factor levels, but leaves the column as `character` class.
 `read.csv` defaults these columns to `factor` class, but automatically sorts levels in alphabetical order, which may not be appropriate, as is the case here.
 `rcsv` determines whether or not to convert a column to factor based on the data frame from which it was written, and stores then extracts the correct factor levels, including their order.
 
@@ -180,6 +199,7 @@ n <- 1E5
 df <- testDF( n )
 write.times <- microbenchmark::microbenchmark(
     base_write = write.csv( df, "READMEfiles/base_write.csv" ),
+    csvy_write = csvy::write_csvy( df, "READMEfiles/csvy_write.csvy" ),
     readr_write = readr::write_csv( df, "READMEfiles/readr_write.csv" ),
     dt_fwrite = data.table::fwrite( df, "READMEfiles/dt_fwrite.csv" ),
     rcsv_noconvert = rcsv::write_rcsv( df, "READMEfiles/rcsv_noconvert.rcsv" ),
@@ -197,7 +217,7 @@ write.times
 ggplot( write.times,
         mapping = aes( expr, time/1E9, colour = expr ) ) +
     geom_violin( show.legend = FALSE ) +
-    geom_jitter( size = 1, alpha = 0.4, width = 0.25, show.legend = FALSE ) +
+    geom_jitter( size = 1, alpha = 0.4, width = 0.5, show.legend = FALSE ) +
     ylab( "write time (s)" ) + xlab( "" ) +
     ylim( c( 0, NA ) ) +
     labs( title = "File write times.",
@@ -233,6 +253,7 @@ Note most csv writers create files of similar sizes, but the `rcsv` format with 
 ```{r, message=FALSE, warning=FALSE}
 read.times <- microbenchmark::microbenchmark(
     base_read = { df.base <- read.csv( "READMEfiles/base_write.csv" ) },
+    csvy_read = { df.csvy <- csvy::read_csvy( "READMEfiles/csvy_write.csvy" ) },
     readr_read = { df.readr <- readr::read_csv( "READMEfiles/readr_write.csv" ) },
     dt_fread = { df.fread <- data.table::fread( "READMEfiles/dt_fwrite.csv" ) },
     rcsv_noconvert = { df.noconvert <- rcsv::read_rcsv( "READMEfiles/rcsv_noconvert.rcsv" ) },
@@ -246,10 +267,10 @@ read.times
 ```
 
 ```{r}
-ggplot( data = read.times, #setDT( read.times )[ grepl( "^rcsv|^dt|^rds|^fst|^feather", expr ) ], 
+ggplot( data = read.times,
         mapping = aes( expr, time/1E9, colour = expr ) ) +
     geom_violin( show.legend = FALSE ) +
-    geom_jitter( size = 1, alpha = 0.4, width = 0.25, show.legend = FALSE ) +
+    geom_jitter( size = 1, alpha = 0.4, width = 0.5, show.legend = FALSE ) +
     ylab( "read time (s)" ) + xlab( "" ) +
     ylim( c( 0, NA ) ) +
     labs( title = "File read times.",
@@ -286,6 +307,14 @@ read.times.with.manipulations <- microbenchmark::microbenchmark(
                      ][ , times := chron::times( times ) ] },
     rcsv_noconvert = { df.noconvert <- rcsv::read_rcsv( "READMEfiles/rcsv_noconvert.rcsv" ) },
     rcsv_convert = { df.convert <- rcsv::read_rcsv( "READMEfiles/rcsv_convert.rcsv" ) },
+    csvy = {
+        df.csvy <- csvy::read_csvy( "READMEfiles/csvy_write.csvy" )
+        df.csvy$dates <- as.Date( df.csvy$dates )
+        df.csvy$posix <- as.POSIXct( df.csvy$posix, tz = attr( df.csvy$posix, "tzone" ) )
+        df.csvy$itime <- as.ITime( df.csvy$itime )
+        df.csvy$factor <- factor( df.csvy$factor, levels = attr( df.csvy$factor, "levels" ) )
+        df.csvy$times <- chron::times( df.csvy$times )
+    },
     times = 12
 )
 read.times.with.manipulations
@@ -295,7 +324,7 @@ read.times.with.manipulations
 ggplot( setDT( read.times.with.manipulations )[ grepl( "^base|^readr|^rcsv|^dt", expr ) ],
         mapping = aes( expr, time/1E9, colour = expr ) ) +
     geom_violin( show.legend = FALSE ) +
-    geom_jitter( size = 1, alpha = 0.4, width = 0.25, show.legend = FALSE ) +
+    geom_jitter( size = 1, alpha = 0.4, width = 0.5, show.legend = FALSE ) +
     ylab( "read time (s)" ) + xlab( "" ) +
     ylim( c( 0, NA ) ) +
     labs( title = "File read times, with column manipulations where necessary.",
@@ -307,12 +336,13 @@ So, assuming you'll be performing the necessary data conversions on import, `fre
 ## Data integrity
 ### Testing that the data has been read in correctly.
 
-To test for correct data read, ee look at each column of each imported data frame, and compare it to the matching column in the original data frame. In this way, we see if the data has remained consistent through the write/read process.
+To test for correct data read, we look at each column of each imported data frame, and compare it to the matching column in the original data frame. In this way, we see if the data has remained consistent through the write/read process.
 ```{r, warning=FALSE}
 tests <- lapply( X = list( df.convert = df.convert,
                            df.noconvert = df.noconvert,
                            df.fread.manip = df.fread.manip,
-                           df.readr.manip = df.readr.manip ),
+                           df.readr.manip = df.readr.manip,
+                           df.csvy = df.csvy ),
                  FUN = function(x) {
                      sapply( seq_along( df ),
                              function(i) all.equal( df[[i]], x[[i]] )
