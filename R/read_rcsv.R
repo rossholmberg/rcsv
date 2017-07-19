@@ -121,7 +121,7 @@ read_rcsv <- function( file, subset = NULL ) {
                 output[ , ( col ) := as.Date( as.integer( .SD[[col]] ),
                                               origin = "1970-01-01" ) ]
             } else if( convert.from == "string" ) {
-                output[ , ( col ) := as.Date( fasttime::fastPOSIXct( .SD[[col]], tz = "UTC" ) ) ]
+                output[ , ( col ) := as_Date( .SD[[col]] ) ]
             } else {
                 warning( paste0( "Don't know how to convert Date column `",
                                  column.names[ col ],
