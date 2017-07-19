@@ -152,7 +152,7 @@ The `write_rcsv` function includes several options for "compressing" the csv out
 
 ```{r}
 rcsv::write_rcsv( df, testfile, strings.convert = TRUE )
-readLines( testfile, n = 12 )
+readLines( testfile, n = 15 )
 ```
 
 The data itself here looks significantly different from the regular csv. character strings, factors, dates, times, and logical objects are all being represented in integer or numeric form, to be converted back to their respective classes on import using the information stored in the header, without any extra parameters needing to be passed to the import call:

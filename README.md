@@ -87,10 +87,10 @@ write_rcsv( df, testfile )
 #>  And another one.
 ```
 
-Noticee that at the top of this file though, is a (JSON-like) header:
+Notice that at the top of this file though, is a (JSON-like) header:
 
 ``` r
-readLines( testfile, n = 12 )
+readLines( testfile, n = 15 )
 #>  [1] "#{rcsvHeader},{headlines:11},{noteslines:2},{colreflines:8},{tablerows:100}"                         
 #>  [2] "#{notes:Here's an example note.}"                                                                    
 #>  [3] "#{notes:And another one.}"                                                                           
@@ -102,7 +102,10 @@ readLines( testfile, n = 12 )
 #>  [9] "#{colref:6},{colname:logical},{colclass:logical},{from:long}"                                        
 #> [10] "#{colref:7},{colname:factor},{colclass:factor},{levels:small,medium,large,extra-large},{from:string}"
 #> [11] "#{colref:8},{colname:times},{colclass:times},{from:string}"                                          
-#> [12] "integers,letters,dates,posix,itime,logical,factor,times"
+#> [12] "integers,letters,dates,posix,itime,logical,factor,times"                                             
+#> [13] "1,h,2107-12-31,1970-01-12T08:46:40Z,05:43:46,FALSE,extra-large,00:01:26"                             
+#> [14] "2,u,2046-07-20,1970-01-12T09:03:20Z,23:05:47,TRUE,small,00:15:57"                                    
+#> [15] "3,k,2082-05-19,1970-01-12T09:20:00Z,14:25:58,FALSE,extra-large,00:30:28"
 ```
 
 The first line of the file contains some basic details about the file structure, below which is a series of lines specifying details of each column. This "header" section will be used by `read_rcsv` to import the data frame in a manner matching the file written out, without the need for special parameters on the read call, or additional manipulations after import.
@@ -234,7 +237,7 @@ The `write_rcsv` function includes several options for "compressing" the csv out
 rcsv::write_rcsv( df, testfile, strings.convert = TRUE )
 #> Notes:  Here's an example note.
 #>  And another one.
-readLines( testfile, n = 12 )
+readLines( testfile, n = 15 )
 #>  [1] "#{rcsvHeader},{headlines:11},{noteslines:2},{colreflines:8},{tablerows:100}"                                                      
 #>  [2] "#{notes:Here's an example note.}"                                                                                                 
 #>  [3] "#{notes:And another one.}"                                                                                                        
@@ -246,7 +249,10 @@ readLines( testfile, n = 12 )
 #>  [9] "#{colref:6},{colname:logical},{colclass:logical},{from:integer}"                                                                  
 #> [10] "#{colref:7},{colname:factor},{colclass:factor},{levels:small,medium,large,extra-large},{from:integer}"                            
 #> [11] "#{colref:8},{colname:times},{colclass:times},{from:numeric}"                                                                      
-#> [12] "integers,letters,dates,posix,itime,logical,factor,times"
+#> [12] "integers,letters,dates,posix,itime,logical,factor,times"                                                                          
+#> [13] "1,8,50402,1000000,20626,0,4,0.001"                                                                                                
+#> [14] "2,21,27959,1001000,83147,1,1,0.0110808080808081"                                                                                  
+#> [15] "3,11,41046,1002000,51958,0,4,0.0211616161616162"
 ```
 
 The data itself here looks significantly different from the regular csv. character strings, factors, dates, times, and logical objects are all being represented in integer or numeric form, to be converted back to their respective classes on import using the information stored in the header, without any extra parameters needing to be passed to the import call:
@@ -299,24 +305,24 @@ write.times <- microbenchmark::microbenchmark(
 )
 write.times
 #> Unit: milliseconds
-#>            expr         min          lq        mean      median
-#>      base_write 1443.225465 1502.656276 1578.110362 1553.346403
-#>     readr_write 1221.255362 1295.262282 1330.022583 1335.235287
-#>       dt_fwrite   15.916950   16.189959   35.281099   16.578532
-#>  rcsv_noconvert   56.250162   62.242014  106.617409   89.231216
-#>    rcsv_convert   23.792785   23.933099   37.223181   24.269112
-#>     rds_default  372.352141  374.994775  377.195577  377.804246
-#>             fst    3.809448    3.864523   15.420128    3.921533
-#>         feather    4.818591    4.872651    7.360614    4.940223
-#>           uq        max neval
-#>  1621.184513 1859.69566    12
-#>  1358.287101 1416.43248    12
-#>    26.054796  156.75417    12
-#>   141.602549  199.42766    12
-#>    36.268625  136.92847    12
-#>   379.183261  380.80144    12
-#>     6.135300   88.90081    12
-#>     5.782434   25.68775    12
+#>            expr         min          lq       mean      median         uq
+#>      base_write 2041.665661 2152.615432 2217.37180 2196.721061 2264.42605
+#>     readr_write 1868.495453 1981.885070 2038.54860 2013.841968 2125.89219
+#>       dt_fwrite   31.218609   32.065960   34.73217   33.299292   35.68307
+#>  rcsv_noconvert  661.864865  683.496033  728.47201  717.284687  751.03250
+#>    rcsv_convert   40.527412   41.560537   56.70949   44.274680   69.24308
+#>     rds_default  440.414554  442.229897  460.95943  458.189173  474.36831
+#>             fst    9.603177    9.721027   13.59323   11.787356   14.33337
+#>         feather    8.906546    9.282094   10.96685    9.646314   11.21606
+#>         max neval
+#>  2520.15320    12
+#>  2228.80600    12
+#>    45.52502    12
+#>   841.44069    12
+#>   126.61868    12
+#>   489.24868    12
+#>    33.42652    12
+#>    21.56478    12
 ```
 
 `write_rcsv` is built around the fantastic `data.table::fwrite` function, making it much faster than both `base::write.csv` and `readr::write_csv`. It even maintains relatively good performance compared with `data.table::fwrite`, but is slowed a little by the conversion processes and header writing steps.
@@ -375,24 +381,24 @@ read.times <- microbenchmark::microbenchmark(
 )
 read.times
 #> Unit: milliseconds
-#>            expr        min         lq       mean     median         uq
-#>       base_read 814.308740 844.492948 880.434284 853.899882 930.306224
-#>      readr_read 124.591556 134.556925 162.925143 142.053381 204.145846
-#>        dt_fread  74.395278  81.236267  90.638950  84.762014  94.709424
-#>  rcsv_noconvert 139.979558 144.438235 161.397583 168.289216 171.503119
-#>    rcsv_convert  72.676689  91.212814 121.716011  95.867846 150.219459
-#>     rds_default  34.872713  35.532128  38.386559  35.718348  36.777367
-#>             fst   3.128357   3.194956  22.864712   3.618270  18.556116
-#>         feather   2.695026   2.775343   3.047929   2.925985   3.271799
+#>            expr         min          lq        mean     median          uq
+#>       base_read 1868.719425 1914.788615 1982.255296 1958.11861 2018.403611
+#>      readr_read  158.194305  162.613146  188.189757  177.87227  193.068399
+#>        dt_fread   97.503365  100.979011  105.467709  102.68326  108.472006
+#>  rcsv_noconvert  203.351055  226.312980  274.691320  241.12584  331.211979
+#>    rcsv_convert   98.317096  113.711342  148.513387  128.59836  183.886843
+#>     rds_default   44.062025   47.623549   54.064613   49.30708   62.122414
+#>             fst    4.867486    6.540487    9.609539    7.03472    8.357452
+#>         feather    5.123905    5.807993    9.973762    6.69188    7.389927
 #>         max neval
-#>  980.798262    12
-#>  231.952405    12
-#>  125.853915    12
-#>  182.611449    12
-#>  217.666965    12
-#>   60.383518    12
-#>  105.344794    12
-#>    3.879892    12
+#>  2188.15433    12
+#>   316.92221    12
+#>   118.94102    12
+#>   371.79447    12
+#>   237.90034    12
+#>    71.49639    12
+#>    28.84116    12
+#>    30.23217    12
 ```
 
 ``` r
@@ -443,16 +449,16 @@ read.times.with.manipulations <- microbenchmark::microbenchmark(
 )
 read.times.with.manipulations
 #> Unit: milliseconds
-#>            expr       min        lq      mean    median        uq      max
-#>      readr_read 489.54103 520.20777 548.47964 538.55969 591.32222 599.0410
-#>        dt_fread 490.54643 494.75862 520.39188 505.68648 516.50696 620.5011
-#>  rcsv_noconvert 139.40223 156.68906 184.14517 168.84559 213.25729 254.2323
-#>    rcsv_convert  72.26905  73.96774  93.80176  91.04462  94.15109 196.0591
-#>  neval
-#>     12
-#>     12
-#>     12
-#>     12
+#>            expr        min         lq      mean     median        uq
+#>      readr_read  612.85806  637.03119  698.4770  679.17092  768.9131
+#>        dt_fread 2414.14187 2453.70571 2511.9350 2464.73922 2582.0660
+#>  rcsv_noconvert  201.61653  210.72137  218.2322  220.20953  225.5082
+#>    rcsv_convert   93.31488   95.16434  113.1085   99.96889  117.9124
+#>        max neval
+#>   785.7703    12
+#>  2704.3046    12
+#>   228.1607    12
+#>   216.1064    12
 ```
 
 ``` r
