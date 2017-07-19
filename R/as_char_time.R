@@ -12,6 +12,8 @@
 as_char_time <- function( x ) {
     if( class( x ) == "times" ) {
         x <- as.integer( round( x * 86400 ) )
+    } else if( !is.integer( x ) ) {
+        x <- as.integer( x )
     }
     .Call('rcsv_asCharTime', PACKAGE = 'rcsv', x)
 }

@@ -3,6 +3,7 @@
 export(as_Date)
 export(as_IDate)
 export(as_ITime)
+export(as_char_time)
 export(as_posix)
 export(as_times)
 export(classes_rcsv)

@@ -5,6 +5,17 @@
 
 using namespace Rcpp;
 
+// asCharTime
+std::vector<std::string> asCharTime(NumericVector x);
+RcppExport SEXP rcsv_asCharTime(SEXP xSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< NumericVector >::type x(xSEXP);
+    rcpp_result_gen = Rcpp::wrap(asCharTime(x));
+    return rcpp_result_gen;
+END_RCPP
+}
 // toTimeDay
 NumericVector toTimeDay(CharacterVector x);
 RcppExport SEXP rcsv_toTimeDay(SEXP xSEXP) {
@@ -29,6 +40,7 @@ END_RCPP
 }
 
 static const R_CallMethodDef CallEntries[] = {
+    {"rcsv_asCharTime", (DL_FUNC) &rcsv_asCharTime, 1},
     {"rcsv_toTimeDay", (DL_FUNC) &rcsv_toTimeDay, 1},
     {"rcsv_toTimeSec", (DL_FUNC) &rcsv_toTimeSec, 1},
     {NULL, NULL, 0}
