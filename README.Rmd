@@ -85,9 +85,9 @@ testfile <- "READMEfiles/test.rcsv"
 write_rcsv( df, testfile )
 ```
 
-Noticee that at the top of this file though, is a (JSON-like) header:
+Notice that at the top of this file though, is a (JSON-like) header:
 ```{r}
-readLines( testfile, n = 12 )
+readLines( testfile, n = 15 )
 ```
 
 The first line of the file contains some basic details about the file structure, below which is a series of lines specifying details of each column. This "header" section will be used by `read_rcsv` to import the data frame in a manner matching the file written out, without the need for special parameters on the read call, or additional manipulations after import.
