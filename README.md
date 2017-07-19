@@ -406,25 +406,25 @@ write.times <- microbenchmark::microbenchmark(
 write.times
 #> Unit: milliseconds
 #>            expr         min          lq       mean     median         uq
-#>      base_write 1892.275241 1920.634331 2071.62366 2041.58149 2117.15647
-#>      csvy_write 1921.851768 1982.747639 2040.63525 2029.70842 2095.58228
-#>     readr_write 1784.717959 1874.332927 1907.50850 1896.47826 1945.72923
-#>       dt_fwrite   31.009089   32.835363   33.94921   33.81373   35.51984
-#>  rcsv_noconvert  595.436717  636.185753  678.12924  665.69128  714.31435
-#>    rcsv_convert   40.429801   41.840497   62.81886   54.12148   69.63089
-#>     rds_default  424.053992  439.299166  454.07322  444.41349  462.87916
-#>             fst    9.591155   10.661112   21.35015   13.36918   18.96208
-#>         feather    9.218395    9.517326   15.37526   10.13300   16.34822
+#>      base_write 1865.122737 1960.132106 2074.49549 2069.99542 2147.87738
+#>      csvy_write 1924.328024 2026.509486 2078.96079 2083.87210 2135.93451
+#>     readr_write 1779.642001 1876.205240 1917.23784 1915.24497 1947.86314
+#>       dt_fwrite   29.536957   33.190015   34.29838   34.28722   35.27978
+#>  rcsv_noconvert  630.414506  649.103992  682.35327  676.52768  701.22461
+#>    rcsv_convert   40.031094   41.885119   62.43568   56.67724   68.95914
+#>     rds_default  433.450496  438.296296  441.60673  443.68539  445.02834
+#>             fst    9.622395    9.825881   23.15253   10.70773   15.92769
+#>         feather    9.445226   10.193075   16.59175   11.10621   20.09081
 #>         max neval
-#>  2689.26513    12
-#>  2215.55675    12
-#>  2051.38503    12
-#>    37.14890    12
-#>   774.44934    12
-#>   158.14255    12
-#>   518.73882    12
-#>   103.43708    12
-#>    40.67204    12
+#>  2474.21459    12
+#>  2222.01192    12
+#>  2141.48119    12
+#>    38.38364    12
+#>   763.02340    12
+#>   153.51439    12
+#>   446.52835    12
+#>   133.82114    12
+#>    40.51175    12
 ```
 
 `write_rcsv` is built around the fantastic `data.table::fwrite` function, making it much faster than both `base::write.csv` and `readr::write_csv`. It even maintains relatively good performance compared with `data.table::fwrite`, but is slowed a little by the conversion processes and header writing steps.
@@ -485,25 +485,25 @@ read.times <- microbenchmark::microbenchmark(
 read.times
 #> Unit: milliseconds
 #>            expr         min          lq       mean      median          uq
-#>       base_read 1785.224060 1869.052976 1938.48362 1960.220479 2003.150657
-#>       csvy_read 1206.738151 1236.645295 1331.76077 1340.313560 1406.100369
-#>      readr_read  154.414239  163.532888  195.84388  173.978499  197.584783
-#>        dt_fread  104.414238  108.803280  125.70642  111.352527  144.528411
-#>  rcsv_noconvert  211.125705  230.804597  264.25857  238.917271  279.251499
-#>    rcsv_convert   89.250014   96.880959  128.62581  100.757934  140.026239
-#>     rds_default   44.207550   46.517145   48.50546   48.562050   50.400840
-#>             fst    6.727024    7.083920   12.22314    7.667641    8.752264
-#>         feather    5.254878    6.671743   26.84354    6.929982   34.344735
+#>       base_read 1842.221655 1872.251161 1933.88055 1915.581091 1989.957515
+#>       csvy_read 1195.990764 1208.052876 1308.25454 1272.742672 1410.618937
+#>      readr_read  156.267053  163.746084  196.62871  168.848405  207.810022
+#>        dt_fread  104.207240  110.312232  122.93030  114.652682  137.284966
+#>  rcsv_noconvert  219.891251  224.664609  259.44735  234.687201  273.324076
+#>    rcsv_convert   95.920611   97.407859  124.18664  101.221127  123.217694
+#>     rds_default   44.853619   47.423863   49.92746   49.816311   52.541821
+#>             fst    5.607810    6.883768   11.78424    7.517616    9.519244
+#>         feather    5.295504    6.381062   23.00218    7.047912   17.199560
 #>         max neval
-#>  2068.38172    12
-#>  1472.37685    12
-#>   328.78558    12
-#>   162.64403    12
-#>   456.11027    12
-#>   288.05291    12
-#>    53.63903    12
-#>    35.52125    12
-#>   161.66687    12
+#>  2081.06491    12
+#>  1443.47300    12
+#>   309.22069    12
+#>   163.16272    12
+#>   450.65072    12
+#>   281.89342    12
+#>    56.08788    12
+#>    38.16745    12
+#>   157.19320    12
 ```
 
 ``` r
@@ -562,22 +562,22 @@ read.times.with.manipulations <- microbenchmark::microbenchmark(
 )
 read.times.with.manipulations
 #> Unit: milliseconds
-#>            expr        min        lq      mean    median        uq
-#>      readr_read  610.71222  620.5702  681.6942  651.2171  717.5017
-#>        dt_fread 2393.99505 2528.7620 2630.1601 2655.8896 2767.2509
-#>  rcsv_noconvert  204.63623  220.7728  234.3002  236.9866  245.7570
-#>    rcsv_convert   89.56982  101.5485  110.3539  110.6825  118.1645
-#>            csvy 6259.41599 6367.7079 6625.7986 6556.4902 6796.8890
+#>            expr        min         lq      mean    median        uq
+#>      readr_read  631.68679  648.37885  691.8882  655.2630  720.3588
+#>        dt_fread 2506.27575 2516.52530 2592.8815 2566.1288 2649.4746
+#>  rcsv_noconvert  212.10188  227.40729  237.0061  236.7808  244.0867
+#>    rcsv_convert   92.01534   94.49969  107.8380  109.2338  119.0644
+#>            csvy 6332.20657 6466.35811 6624.4969 6539.6950 6769.6372
 #>        max neval
-#>   869.2659    12
-#>  2774.8020    12
-#>   263.7635    12
-#>   137.7625    12
-#>  7271.0296    12
+#>   866.6443    12
+#>  2804.7160    12
+#>   257.9417    12
+#>   125.3447    12
+#>  7078.1915    12
 ```
 
 ``` r
-ggplot( setDT( read.times.with.manipulations )[ grepl( "^base|^readr|^rcsv|^dt", expr ) ],
+ggplot( setDT( read.times.with.manipulations )[ grepl( "^base|^readr|^rcsv|^dt|^csvy", expr ) ],
         mapping = aes( expr, time/1E9, colour = expr ) ) +
     geom_violin( show.legend = FALSE ) +
     geom_jitter( size = 1, alpha = 0.4, width = 0.5, show.legend = FALSE ) +
@@ -589,7 +589,7 @@ ggplot( setDT( read.times.with.manipulations )[ grepl( "^base|^readr|^rcsv|^dt",
 
 ![](READMEfigs/unnamed-chunk-26-1.png)
 
-So, assuming you'll be performing the necessary data conversions on import, `fread` is actually significantly slower than `rcsv`. In the case of `rcsv_convert`, this is due to the fact that converting from numeric variables is often faster than from character. In the case of `rcsv_noconvert`, it is largely due to the use of several speed optimisations, including the use of the `fasttime` package in converting Date and POSIXct variables, which offers significant speed improvements over `as.Date` and `as.POSIXct` functions.
+So, assuming you'll be performing the necessary data conversions on import, `fread` is actually significantly slower than `rcsv`. In the case of `rcsv_convert`, this is due to the fact that converting from numeric variables is often faster than from character. In the case of `rcsv_noconvert`, it is largely due to the use of several speed optimisations, including the use of c++ as well as the `fasttime` package in converting datetime variables to improve speeds over `as.Date`, `as.POSIXct`, `chron::times`, `data.table::as.ITime`, `data.table::as.IDate` functions.
 
 Data integrity
 --------------
@@ -698,12 +698,12 @@ details <- glimpse_rcsv( testfile )
 #>       The equipment was calibrated using ISO 9000 
 #> 
 #>  "integers" <int> 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21...
-#>  "letters" <char> h,g,u,s,p,r,i,m,b,i,e,x,p,w,r,y,f,j,q,s,x...
-#>  "dates" <date> 1986-04-15,2050-02-07,2031-04-26,2103-04-18,2022-12-06,2027-09-1...
+#>  "letters" <char> c,o,r,a,g,o,o,k,w,q,x,i,q,n,z,s,d,j,x,a,v...
+#>  "dates" <date> 2108-08-01,2053-03-17,2129-10-31,2018-08-27,2146-04-15,1985-10-1...
 #>  "posix" <posx> 1970-01-12 08:46:40,1970-01-12 09:03:20,1970-01-12 09:20:00,1970...
-#>  "itime" <itim> 21:32:51,01:36:18,02:20:54,17:40:16,03:03:45,02:35:28,21:08:26,0...
-#>  "logical" <logi> FALSE,FALSE,FALSE,TRUE,TRUE,TRUE,TRUE,FALSE,TRUE,FALSE,FALSE,TRU...
-#>  "factor" <fct> large,small,small,small,small,extra-large,large,extra-large,extr...
+#>  "itime" <itim> 16:27:13,12:46:35,00:45:31,03:43:23,14:44:26,18:49:02,17:28:38,0...
+#>  "logical" <logi> TRUE,TRUE,FALSE,FALSE,TRUE,FALSE,FALSE,TRUE,FALSE,TRUE,FALSE,TRU...
+#>  "factor" <fct> small,large,extra-large,medium,extra-large,small,small,large,med...
 #>  "times" <time> 00:01:26,00:15:57,00:30:28,00:44:59,00:59:30,01:14:01,01:28:32,0...
 ```
 
