@@ -6,6 +6,8 @@
 #'
 #' @param x character vector of time values
 #'
+#' @importFrom chron times
+#'
 #' @export
 
 as_times <- function(x) {
