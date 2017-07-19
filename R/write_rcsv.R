@@ -210,7 +210,7 @@ write_rcsv <- function( input,
         } else {
             for( col in times.cols ) {
                 # convert to ITime so that fwrite writes it out properly
-                input[ , ( col ) := as.character( .SD[[col]] ) ]
+                input[ , ( col ) := as_char_time( .SD[[col]] ) ]
             }
             header[ times.cols ] <- paste( header[ times.cols ],
                                            "from:string",
